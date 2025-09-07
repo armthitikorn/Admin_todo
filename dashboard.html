@@ -216,52 +216,42 @@
                 </div>
             `;
             
-            // --- ดึงข้อมูลคะแนนปรนัย ---
-            const { data: quizResults, error: quizError } = await supabase
-                .from('quiz_results')
+            // --- ดึงข้อมูลทั้งหมดจากตาราง submissions ---
+            const { data: submissions, error: submissionsError } = await supabase
+                .from('submissions')
                 .select('*')
                 .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
-            htmlContent += `<div class="section quiz-results"><h3>ผลคะแนนแบบทดสอบปรนัย</h3>`;
-            if (quizError || !quizResults || quizResults.length === 0) {
-                htmlContent += `<p class="no-data">ยังไม่มีข้อมูลคะแนนปรนัย</p>`;
+            htmlContent += `<div class="section submissions-data"><h3>ข้อมูลทั้งหมดจาก Submissions</h3>`;
+            if (submissionsError || !submissions || submissions.length === 0) {
+                htmlContent += `<p class="no-data">ยังไม่มีข้อมูลการส่งคำตอบ</p>`;
             } else {
-                quizResults.forEach((result, index) => {
-                    const status = result.score >= 4 ? 'ผ่าน' : 'ไม่ผ่าน';
-                    const statusColor = result.score >= 4 ? 'green' : 'red';
-                    htmlContent += `
-                        <div>
-                            <h4>ผลการสอบครั้งที่ ${quizResults.length - index}</h4>
-                            <p>คะแนน: ${result.score} / ${result.total_questions}</p>
+                submissions.forEach((submission, index) => {
+                    htmlContent += `<h4>ข้อมูลการส่งครั้งที่ ${submissions.length - index}</h4>`;
+                    
+                    // แสดงผลคะแนนถ้ามี
+                    if (submission.quiz_score !== undefined && submission.quiz_total_questions !== undefined) {
+                        const status = submission.quiz_score >= 4 ? 'ผ่าน' : 'ไม่ผ่าน';
+                        const statusColor = submission.quiz_score >= 4 ? 'green' : 'red';
+                        htmlContent += `
+                            <p><strong>คะแนน:</strong> ${submission.quiz_score} / ${submission.quiz_total_questions}</p>
                             <p><strong>สถานะ:</strong> <span style="color: ${statusColor};">${status}</span></p>
-                        </div>
-                    `;
-                });
-            }
-            htmlContent += `</div>`;
-            
-            // --- ดึงข้อมูลคำตอบอัตนัย ---
-            const { data: subjectiveAnswers, error: subjectiveError } = await supabase
-                .from('subjective_answers')
-                .select('*')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
+                        `;
+                    }
 
-            htmlContent += `<div class="section subjective-answers"><h3>คำตอบแบบทดสอบอัตนัย</h3>`;
-            if (subjectiveError || !subjectiveAnswers || subjectiveAnswers.length === 0) {
-                htmlContent += `<p class="no-data">ยังไม่มีข้อมูลคำตอบอัตนัย</p>`;
-            } else {
-                subjectiveAnswers.forEach((answerSet, setIndex) => {
-                    htmlContent += `<h4>คำตอบอัตนัยครั้งที่ ${subjectiveAnswers.length - setIndex}</h4>`;
-                    for (const qKey in answerSet.answers) {
-                        if (answerSet.answers.hasOwnProperty(qKey)) {
-                            htmlContent += `
-                                <div class="question-answer">
-                                    <strong>คำถามที่ ${qKey.substring(1)}:</strong>
-                                    <span>${answerSet.answers[qKey]}</span>
-                                </div>
-                            `;
+                    // แสดงผลคำตอบอัตนัยถ้ามี
+                    if (submission.subjective_answers) {
+                        htmlContent += `<h5>คำตอบแบบทดสอบอัตนัย</h5>`;
+                        for (const qKey in submission.subjective_answers) {
+                            if (submission.subjective_answers.hasOwnProperty(qKey)) {
+                                htmlContent += `
+                                    <div class="question-answer">
+                                        <strong>คำถามที่ ${qKey.substring(1)}:</strong>
+                                        <span>${submission.subjective_answers[qKey]}</span>
+                                    </div>
+                                `;
+                            }
                         }
                     }
                 });
