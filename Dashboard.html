@@ -124,7 +124,8 @@
         </div>
 
         <div id="filteredUserData">
-            </div>
+            <p class="no-data">กรุณาใส่อีเมลเพื่อค้นหาข้อมูล</p>
+        </div>
     </div>
     
     <script type="module">
@@ -148,7 +149,7 @@
 
             if (sessionError || !session) {
                 alert("กรุณาเข้าสู่ระบบเพื่อเข้าถึง Dashboard");
-                window.location.href = 'admin_login.html';
+                window.location.href = 'index.html'; 
                 return false;
             }
 
@@ -156,13 +157,13 @@
             const { data: adminData, error: adminError } = await supabase
                 .from('admins')
                 .select('email')
-                .eq('user_id', currentUser.id)
+                .eq('email', currentUser.email)
                 .single();
 
             if (adminError || !adminData) {
                 alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
                 await supabase.auth.signOut();
-                window.location.href = 'admin_login.html';
+                window.location.href = 'index.html'; 
                 return false;
             }
             
@@ -177,8 +178,9 @@
         async function fetchUserData(email) {
             filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
             
+            // ดึงข้อมูลผู้ใช้จากตาราง auth.users หรือตารางที่คุณเก็บข้อมูลอีเมล
             const { data: users, error: userError } = await supabase
-                .from('users') // หรือตาราง users ที่คุณเก็บข้อมูลอีเมล
+                .from('users') 
                 .select('id, email')
                 .eq('email', email);
 
@@ -252,7 +254,7 @@
             // --- ดึงรายการไฟล์เสียง ---
             const { data: audioFiles, error: audioError } = await supabase.storage
                 .from('audios')
-                .list(`${userId}/`, {
+                .list(userId, {
                     sortBy: { column: 'created_at', order: 'desc' },
                 });
 
@@ -261,19 +263,30 @@
                 htmlContent += `<p class="no-data">ยังไม่มีไฟล์เสียง</p>`;
             } else {
                 htmlContent += '<ul>';
-                audioFiles.forEach(file => {
+                for (const file of audioFiles) {
                     if (file.name !== '.emptyFolderPlaceholder') {
-                        const publicUrl = supabase.storage
-                            .from('audios')
-                            .getPublicUrl(`${userId}/${file.name}`).data.publicUrl;
-                        htmlContent += `
-                            <li>
-                                <span>${file.name}</span>
-                                <a href="${publicUrl}" download="${file.name}">ดาวน์โหลด</a>
-                            </li>
-                        `;
+                        try {
+                            const { data: audioBlob, error: downloadError } = await supabase.storage
+                                .from('audios')
+                                .download(`${userId}/${file.name}`);
+                            if (downloadError) {
+                                console.error(`Error downloading file: ${file.name}`, downloadError);
+                                htmlContent += `<li><span>${file.name}</span><span>เกิดข้อผิดพลาดในการโหลดไฟล์</span></li>`;
+                            } else {
+                                const audioUrl = URL.createObjectURL(audioBlob);
+                                htmlContent += `
+                                    <li>
+                                        <span>${file.name}</span>
+                                        <audio controls src="${audioUrl}"></audio>
+                                    </li>
+                                `;
+                            }
+                        } catch (e) {
+                            console.error(`Unexpected error with file: ${file.name}`, e);
+                            htmlContent += `<li><span>${file.name}</span><span>เกิดข้อผิดพลาดที่ไม่คาดคิด</span></li>`;
+                        }
                     }
-                });
+                }
                 htmlContent += '</ul>';
             }
             htmlContent += `</div></div>`;
@@ -288,7 +301,7 @@
                 alert('เกิดข้อผิดพลาดในการออกจากระบบ');
             } else {
                 alert('ออกจากระบบเรียบร้อย');
-                window.location.href = 'admin_login.html';
+                window.location.href = 'index.html'; 
             }
         }
 
