@@ -96,12 +96,28 @@
         .logout-button:hover {
             background-color: #c82333;
         }
-        #userFilter {
-            width: 100%;
-            padding: 8px;
+        .filter-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             margin-bottom: 20px;
+        }
+        #userFilter {
+            flex-grow: 1;
+            padding: 8px;
             border-radius: 4px;
             border: 1px solid #ccc;
+        }
+        #searchButton {
+            padding: 10px 15px;
+            background-color: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #searchButton:hover {
+            background-color: #005fa3;
         }
     </style>
 </head>
@@ -120,7 +136,10 @@
 
         <div class="section">
             <h3>ค้นหาข้อมูลตามอีเมลผู้ใช้</h3>
-            <input type="text" id="userFilter" placeholder="พิมพ์อีเมลผู้ใช้ที่ต้องการค้นหา..." />
+            <div class="filter-container">
+                <input type="text" id="userFilter" placeholder="พิมพ์อีเมลผู้ใช้ที่ต้องการค้นหา..." />
+                <button id="searchButton">ตรวจสอบข้อมูล</button>
+            </div>
         </div>
 
         <div id="filteredUserData">
@@ -131,7 +150,7 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        // แทนที่ด้วยข้อมูล Supabase ของคุณ
+        // **สำคัญ**: แทนที่ด้วยข้อมูล Supabase Project ของคุณ
         const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
@@ -142,6 +161,7 @@
         const adminEmailSpan = document.getElementById('adminEmail');
         const logoutButton = document.getElementById('logoutButton');
         const userFilterInput = document.getElementById('userFilter');
+        const searchButton = document.getElementById('searchButton');
         const filteredUserDataDiv = document.getElementById('filteredUserData');
 
         async function checkAdminAccess() {
@@ -266,18 +286,19 @@
                 for (const file of audioFiles) {
                     if (file.name !== '.emptyFolderPlaceholder') {
                         try {
-                            const { data: audioBlob, error: downloadError } = await supabase.storage
+                            const { data: urlData, error: urlError } = supabase.storage
                                 .from('audios')
-                                .download(`${userId}/${file.name}`);
-                            if (downloadError) {
-                                console.error(`Error downloading file: ${file.name}`, downloadError);
+                                .getPublicUrl(`${userId}/${file.name}`);
+                            
+                            if (urlError) {
+                                console.error(`Error getting public URL for file: ${file.name}`, urlError);
                                 htmlContent += `<li><span>${file.name}</span><span>เกิดข้อผิดพลาดในการโหลดไฟล์</span></li>`;
                             } else {
-                                const audioUrl = URL.createObjectURL(audioBlob);
                                 htmlContent += `
                                     <li>
                                         <span>${file.name}</span>
-                                        <audio controls src="${audioUrl}"></audio>
+                                        <audio controls src="${urlData.publicUrl}"></audio>
+                                        <a href="${urlData.publicUrl}" download="${file.name}">ดาวน์โหลด</a>
                                     </li>
                                 `;
                             }
@@ -305,18 +326,18 @@
             }
         }
 
+        // Event listeners
         logoutButton.addEventListener('click', logout);
-        userFilterInput.addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') {
-                const email = userFilterInput.value.trim();
-                if (email) {
-                    fetchUserData(email);
-                } else {
-                    filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาใส่อีเมลเพื่อค้นหา</p>';
-                }
+        searchButton.addEventListener('click', () => {
+            const email = userFilterInput.value.trim();
+            if (email) {
+                fetchUserData(email);
+            } else {
+                filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาใส่อีเมลเพื่อค้นหา</p>';
             }
         });
 
+        // Initial check for admin access
         checkAdminAccess();
     </script>
 </body>
