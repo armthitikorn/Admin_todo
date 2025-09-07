@@ -162,7 +162,6 @@
 
         const filteredUserDataDiv = document.getElementById('filteredUserData');
 
-        // --- Main function to check admin access and load dashboard ---
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
@@ -184,19 +183,21 @@
             dateFilterInput.value = today;
         }
 
-        // --- Function to fetch all data based on a user_id and email ---
-        async function fetchAllUserData(userId, userEmail) {
+        async function fetchAllUserData(userId, userEmail, date = null) {
             filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
 
-            // Fetch submissions from the 'submissions' table for the user
-            const { data: submissions, error: submissionsError } = await supabase
-                .from('submissions')
-                .select('*')
-                .eq('user_id', userId);
+            let query = supabase.from('submissions').select('*').eq('user_id', userId);
+            
+            if (date) {
+                const startOfDay = `${date}T00:00:00.000Z`;
+                const endOfDay = `${date}T23:59:59.999Z`;
+                query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+            }
+
+            const { data: submissions, error: submissionsError } = await query;
 
             if (submissionsError || !submissions || submissions.length === 0) {
                 filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับผู้ใช้คนนี้</p>`;
-                console.error('Error fetching submissions:', submissionsError);
                 return;
             }
 
@@ -232,8 +233,6 @@
         }
 
         // --- Event Handlers ---
-
-        // Filter by Email
         emailFilterBtn.addEventListener('click', async () => {
             const email = emailFilterInput.value.trim();
             if (!email) {
@@ -249,7 +248,6 @@
 
             if (userError || !userSubmissions || userSubmissions.length === 0) {
                 filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับอีเมลนี้</p>`;
-                console.error('Error fetching user submissions:', userError);
                 return;
             }
 
@@ -258,7 +256,6 @@
             await fetchAllUserData(userId, userEmail);
         });
 
-        // Filter by Date
         dateFilterBtn.addEventListener('click', async () => {
             const date = dateFilterInput.value;
             if (!date) {
@@ -312,13 +309,11 @@
             filteredUserDataDiv.innerHTML = htmlContent;
         });
 
-        // Logout button handler
         logoutButton.addEventListener('click', async () => {
             await supabase.auth.signOut();
             window.location.href = 'index.html';
         });
 
-        // Run initial check when the page loads
         checkAdminAccess();
     </script>
 </body>
