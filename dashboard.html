@@ -34,52 +34,13 @@
             border-bottom: 1px solid #eee;
             padding-bottom: 10px;
         }
-        .user-info p, .quiz-result p, .subjective-answers p {
+        .user-info p {
             margin: 8px 0;
         }
-        .loading-text {
+        .loading-text, .no-data {
             text-align: center;
             font-style: italic;
             color: #666;
-        }
-        .no-data {
-            text-align: center;
-            color: #888;
-            font-style: italic;
-        }
-        .audio-list ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        .audio-list li {
-            background-color: #e6f7ff;
-            border: 1px solid #b3e0ff;
-            border-radius: 5px;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .audio-list a {
-            color: #007acc;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .audio-list a:hover {
-            text-decoration: underline;
-        }
-        .question-answer {
-            background-color: #f0f8ff;
-            border-left: 4px solid #007acc;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-        .question-answer strong {
-            display: block;
-            margin-bottom: 5px;
-            color: #0059b3;
         }
         .logout-button {
             background-color: #dc3545;
@@ -102,13 +63,13 @@
             gap: 10px;
             margin-bottom: 20px;
         }
-        #dateFilter {
+        .filter-container input[type="date"], .filter-container input[type="email"] {
             flex-grow: 1;
             padding: 8px;
             border-radius: 4px;
             border: 1px solid #ccc;
         }
-        #loadDataButton, #loadAudioButton {
+        .filter-container button {
             padding: 10px 15px;
             background-color: #007acc;
             color: white;
@@ -116,8 +77,34 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        #loadDataButton:hover, #loadAudioButton:hover {
+        .filter-container button:hover {
             background-color: #005fa3;
+        }
+        .user-data-item {
+            background-color: #f0f8ff;
+            border-left: 4px solid #007acc;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        .user-data-item strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .user-data-item p {
+            margin: 0;
+            margin-bottom: 5px;
+        }
+        .download-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -135,26 +122,19 @@
         </div>
 
         <div class="section">
-            <h3>ข้อมูลของผู้ใช้งาน (ตามวันที่)</h3>
+            <h3>ค้นหาข้อมูลผู้ใช้งาน</h3>
             <div class="filter-container">
-                <input type="date" id="dateFilter" />
-                <button id="loadDataButton">แสดงข้อมูลผู้ใช้</button>
+                <input type="email" id="emailFilterInput" placeholder="กรอกอีเมลผู้ใช้" />
+                <button id="emailFilterBtn">กรองตามอีเมล</button>
             </div>
-            <div id="filteredUserData">
-                <p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>
+            <div class="filter-container">
+                <input type="date" id="dateFilterInput" />
+                <button id="dateFilterBtn">กรองตามวันที่</button>
             </div>
         </div>
 
-        <div class="section">
-            <h3>ไฟล์เสียงที่อัปโหลด</h3>
-            <div class="filter-container">
-                <button id="loadAudioButton">แสดงไฟล์เสียงทั้งหมด</button>
-                <button id="emailFilterBtn">กรองตามอีเมล</button>
-                <button id="testBtn">ปุ่มทดสอบ</button>
-            </div>
-            <div id="audioFileList">
-                <p class="no-data">กดปุ่ม "แสดงไฟล์เสียงทั้งหมด" เพื่อโหลดไฟล์</p>
-            </div>
+        <div id="filteredUserData">
+            <p class="no-data">ใช้ตัวกรองด้านบนเพื่อค้นหาข้อมูล</p>
         </div>
     </div>
     
@@ -169,19 +149,16 @@
         // **สำคัญ**: ใส่ user_id ของ Admin ของคุณที่นี่
         const ADMIN_USER_ID = '22034dab-2bcb-4624-b3ab-ace8da6474ba';
 
-        // --- ประกาศตัวแปรเพื่ออ้างอิงถึงองค์ประกอบ HTML ---
         const loadingDiv = document.getElementById('loading');
         const dashboardContent = document.getElementById('dashboardContent');
         const adminIdSpan = document.getElementById('adminId');
         const adminEmailSpan = document.getElementById('adminEmail');
         const logoutButton = document.getElementById('logoutButton');
-        const dateFilterInput = document.getElementById('dateFilter');
-        const loadDataButton = document.getElementById('loadDataButton');
-        const filteredUserDataDiv = document.getElementById('filteredUserData');
-        const loadAudioButton = document.getElementById('loadAudioButton');
-        const audioFileListDiv = document.getElementById('audioFileList');
+        const emailFilterInput = document.getElementById('emailFilterInput');
         const emailFilterBtn = document.getElementById('emailFilterBtn');
-        const testBtn = document.getElementById('testBtn');
+        const dateFilterInput = document.getElementById('dateFilterInput');
+        const dateFilterBtn = document.getElementById('dateFilterBtn');
+        const filteredUserDataDiv = document.getElementById('filteredUserData');
 
         // --- ฟังก์ชันหลักในการตรวจสอบสิทธิ์และแสดงข้อมูล ---
         async function checkAdminAccess() {
@@ -194,92 +171,110 @@
                 return;
             }
 
-            // ถ้าตรวจสอบผ่าน
             const currentUser = session.user;
             adminIdSpan.textContent = currentUser.id;
             adminEmailSpan.textContent = currentUser.email;
-            
-            // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = (today.getMonth() + 1).toString().padStart(2, '0');
-            const day = today.getDate().toString().padStart(2, '0');
-            dateFilterInput.value = `${year}-${month}-${day}`;
-            
-            // ซ่อนหน้าจอ Loading และแสดง Dashboard
+
             loadingDiv.style.display = 'none';
             dashboardContent.style.display = 'block';
         }
 
-        // --- ฟังก์ชันดึงข้อมูลผู้ใช้ตามวันที่ ---
-        async function fetchUserDataByDate() {
-            const selectedDate = dateFilterInput.value;
-            if (!selectedDate) {
-                filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>';
+        // --- ฟังก์ชันสำหรับกรองข้อมูลตามอีเมล ---
+        async function fetchUserDataByEmail(email) {
+            if (!email) {
+                alert("กรุณาใส่อีเมลเพื่อค้นหา");
+                return;
+            }
+            
+            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังค้นหาข้อมูล...</div>`;
+
+            // ดึงข้อมูลผู้ใช้จากตาราง auth.users
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('email', email)
+                .single();
+
+            if (userError || !userData) {
+                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับอีเมลนี้</p>`;
                 return;
             }
 
-            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
+            const userId = userData.id;
 
-            // ดึงข้อมูลจากฐานข้อมูลตามที่คุณกำหนด
-            const { data, error } = await supabase
-                .from('multiple_choice_answers') // สมมติว่านี่คือตารางที่เก็บข้อมูลของผู้ใช้
-                .select('*')
-                .gte('submitted_at', `${selectedDate}T00:00:00.000Z`)
-                .lte('submitted_at', `${selectedDate}T23:59:59.999Z`);
-
-            if (error || !data || data.length === 0) {
-                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลผู้ใช้สำหรับวันที่นี้</p>`;
-            } else {
-                let htmlContent = '<h3>ข้อมูลผู้ใช้สำหรับวันที่ ' + selectedDate + '</h3>';
-                data.forEach(item => {
-                    htmlContent += `
-                        <div class="question-answer">
-                            <strong>User ID:</strong> <span>${item.user_id}</span><br>
-                            <strong>Status:</strong> <span>${item.is_correct ? 'Correct' : 'Incorrect'}</span>
-                        </div>
-                    `;
-                });
-                filteredUserDataDiv.innerHTML = htmlContent;
-            }
+            // ดึงข้อมูลทั้งหมดที่เกี่ยวข้องกับ user_id
+            await fetchAllUserData(userId, email);
         }
 
-        // --- ฟังก์ชันดึงและแสดงไฟล์เสียงทั้งหมด ---
-        async function fetchAudioFiles() {
-            audioFileListDiv.innerHTML = `<div class="loading-text">กำลังโหลดไฟล์เสียง...</div>`;
-            const { data: fileList, error: listError } = await supabase.storage.from('audio-files').list();
-
-            if (listError) {
-                audioFileListDiv.innerHTML = `<p class="no-data">เกิดข้อผิดพลาดในการโหลดไฟล์: ${listError.message}</p>`;
+        // --- ฟังก์ชันสำหรับกรองข้อมูลตามวันที่ ---
+        async function fetchUserDataByDate(date) {
+            if (!date) {
+                alert("กรุณาเลือกวันที่");
                 return;
             }
+            
+            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังค้นหาข้อมูล...</div>`;
 
-            if (!fileList || fileList.length === 0) {
-                audioFileListDiv.innerHTML = `<p class="no-data">ไม่พบไฟล์เสียงใน Bucket</p>`;
-                return;
-            }
-
-            let fileListHTML = '<ul>';
-            for (const file of fileList) {
-                if (file.name === '.emptyFolderPlaceholder') continue; // ข้ามไฟล์ที่ไม่ต้องการ
-                const { data: publicUrl, error: urlError } = supabase.storage.from('audio-files').getPublicUrl(file.name);
-                
-                if (urlError) {
-                    console.error('Error getting public URL:', urlError);
-                    continue;
-                }
-                
-                fileListHTML += `
-                    <li>
-                        <span>${file.name}</span>
-                        <a href="${publicUrl.publicUrl}" download="${file.name}">ดาวน์โหลด</a>
-                    </li>
-                `;
-            }
-            fileListHTML += '</ul>';
-            audioFileListDiv.innerHTML = fileListHTML;
+            // ดึงข้อมูลทั้งหมดที่เกี่ยวข้องกับวันที่
+            // ในที่นี้จะดึงข้อมูลของ adminId ซึ่งเป็น admin user
+            await fetchAllUserData(ADMIN_USER_ID, adminEmailSpan.textContent, date);
         }
         
+        // --- ฟังก์ชันดึงและแสดงผลข้อมูลทั้งหมด ---
+        async function fetchAllUserData(userId, userEmail, date = null) {
+            let userContent = `
+                <div class="user-data-item">
+                    <h3>ข้อมูลผู้ใช้งาน</h3>
+                    <p><strong>ID:</strong> ${userId}</p>
+                    <p><strong>อีเมล:</strong> ${userEmail}</p>
+                </div>
+            `;
+
+            // --- ดึงข้อมูลคะแนนปรนัย ---
+            const { data: quizResults, error: quizError } = await supabase
+                .from('multiple_choice_answers')
+                .select('*')
+                .eq('user_id', userId);
+            
+            userContent += `
+                <div class="user-data-item">
+                    <h3>ผลแบบทดสอบปรนัย</h3>
+                    <p class="no-data">ไม่มีข้อมูล</p>
+                </div>
+            `;
+            // TODO: โค้ดสำหรับแสดงผลคะแนนปรนัย
+
+            // --- ดึงข้อมูลคำตอบอัตนัย ---
+            const { data: essayAnswers, error: essayError } = await supabase
+                .from('essay_answers')
+                .select('*')
+                .eq('user_id', userId);
+
+            userContent += `
+                <div class="user-data-item">
+                    <h3>คำตอบอัตนัย</h3>
+                    <p class="no-data">ไม่มีข้อมูล</p>
+                </div>
+            `;
+            // TODO: โค้ดสำหรับแสดงผลคำตอบอัตนัย
+
+            // --- ดึงข้อมูลไฟล์เสียง ---
+            const { data: voiceAnswers, error: voiceError } = await supabase
+                .from('voice_answers')
+                .select('*')
+                .eq('user_id', userId);
+            
+            userContent += `
+                <div class="user-data-item">
+                    <h3>ไฟล์เสียง</h3>
+                    <p class="no-data">ไม่มีไฟล์เสียง</p>
+                </div>
+            `;
+            // TODO: โค้ดสำหรับแสดงผลและดาวน์โหลดไฟล์เสียง
+
+            filteredUserDataDiv.innerHTML = userContent;
+        }
+
         // --- ฟังก์ชันออกจากระบบ ---
         async function logout() {
             const { error } = await supabase.auth.signOut();
@@ -289,12 +284,16 @@
             window.location.href = 'index.html';
         }
 
-        // --- Event Listeners สำหรับปุ่มต่างๆ ---
+        // --- Event Listeners ---
         logoutButton.addEventListener('click', logout);
-        loadDataButton.addEventListener('click', fetchUserDataByDate);
-        loadAudioButton.addEventListener('click', fetchAudioFiles);
-        emailFilterBtn.addEventListener('click', () => alert('ฟังก์ชันกรองตามอีเมลยังไม่พร้อมใช้งาน'));
-        testBtn.addEventListener('click', () => alert('ปุ่มทดสอบทำงานแล้ว!'));
+        emailFilterBtn.addEventListener('click', () => {
+            const email = emailFilterInput.value;
+            fetchUserDataByEmail(email);
+        });
+        dateFilterBtn.addEventListener('click', () => {
+            const date = dateFilterInput.value;
+            fetchUserDataByDate(date);
+        });
 
         // --- เริ่มต้นการทำงานของหน้า Dashboard ---
         checkAdminAccess();
