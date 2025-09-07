@@ -198,11 +198,8 @@
         async function fetchUserData(email) {
             filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
             
-            // ดึงข้อมูลผู้ใช้จากตาราง auth.users หรือตารางที่คุณเก็บข้อมูลอีเมล
-            const { data: users, error: userError } = await supabase
-                .from('users') 
-                .select('id, email')
-                .eq('email', email);
+            // --- ดึงข้อมูลผู้ใช้จากตาราง auth.users โดยตรง ---
+            const { data: users, error: userError } = await supabase.from('auth.users').select('*').eq('email', email);
 
             if (userError || !users || users.length === 0) {
                 filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลผู้ใช้</p>`;
