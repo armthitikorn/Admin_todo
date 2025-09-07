@@ -94,7 +94,7 @@
 
             if (adminError || !adminData) {
                 // ถ้าไม่พบอีเมลในตาราง admins
-                await supabase.auth.signOut(); // บังคับออกจากระบบเพื่อความปลอดภัย
+                await supabase.auth.signOut();
                 alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
             } else {
                 alert('เข้าสู่ระบบสำเร็จ! กำลังเปลี่ยนเส้นทางไปยังหน้า Dashboard');
