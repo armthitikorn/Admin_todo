@@ -154,13 +154,15 @@
         const adminIdSpan = document.getElementById('adminId');
         const adminEmailSpan = document.getElementById('adminEmail');
         const logoutButton = document.getElementById('logoutButton');
+
         const emailFilterInput = document.getElementById('emailFilterInput');
         const emailFilterBtn = document.getElementById('emailFilterBtn');
         const dateFilterInput = document.getElementById('dateFilterInput');
         const dateFilterBtn = document.getElementById('dateFilterBtn');
+
         const filteredUserDataDiv = document.getElementById('filteredUserData');
 
-        // --- ฟังก์ชันหลักในการตรวจสอบสิทธิ์และแสดงข้อมูล ---
+        // --- Main function to check admin access and load dashboard ---
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
             
@@ -177,125 +179,146 @@
 
             loadingDiv.style.display = 'none';
             dashboardContent.style.display = 'block';
+
+            const today = new Date().toISOString().split('T')[0];
+            dateFilterInput.value = today;
         }
 
-        // --- ฟังก์ชันสำหรับกรองข้อมูลตามอีเมล ---
-        async function fetchUserDataByEmail(email) {
-            if (!email) {
-                alert("กรุณาใส่อีเมลเพื่อค้นหา");
-                return;
-            }
-            
-            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังค้นหาข้อมูล...</div>`;
+        // --- Function to fetch all data based on a user_id and email ---
+        async function fetchAllUserData(userId, userEmail) {
+            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
 
-            // ดึงข้อมูลผู้ใช้จากตาราง auth.users
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('id')
-                .eq('email', email)
-                .single();
+            // Fetch submissions from the 'submissions' table for the user
+            const { data: submissions, error: submissionsError } = await supabase
+                .from('submissions')
+                .select('*')
+                .eq('user_id', userId);
 
-            if (userError || !userData) {
-                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับอีเมลนี้</p>`;
+            if (submissionsError || !submissions || submissions.length === 0) {
+                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับผู้ใช้คนนี้</p>`;
+                console.error('Error fetching submissions:', submissionsError);
                 return;
             }
 
-            const userId = userData.id;
-
-            // ดึงข้อมูลทั้งหมดที่เกี่ยวข้องกับ user_id
-            await fetchAllUserData(userId, email);
-        }
-
-        // --- ฟังก์ชันสำหรับกรองข้อมูลตามวันที่ ---
-        async function fetchUserDataByDate(date) {
-            if (!date) {
-                alert("กรุณาเลือกวันที่");
-                return;
-            }
-            
-            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังค้นหาข้อมูล...</div>`;
-
-            // ดึงข้อมูลทั้งหมดที่เกี่ยวข้องกับวันที่
-            // ในที่นี้จะดึงข้อมูลของ adminId ซึ่งเป็น admin user
-            await fetchAllUserData(ADMIN_USER_ID, adminEmailSpan.textContent, date);
-        }
-        
-        // --- ฟังก์ชันดึงและแสดงผลข้อมูลทั้งหมด ---
-        async function fetchAllUserData(userId, userEmail, date = null) {
-            let userContent = `
+            let htmlContent = `
                 <div class="user-data-item">
                     <h3>ข้อมูลผู้ใช้งาน</h3>
                     <p><strong>ID:</strong> ${userId}</p>
                     <p><strong>อีเมล:</strong> ${userEmail}</p>
                 </div>
-            `;
-
-            // --- ดึงข้อมูลคะแนนปรนัย ---
-            const { data: quizResults, error: quizError } = await supabase
-                .from('multiple_choice_answers')
-                .select('*')
-                .eq('user_id', userId);
-            
-            userContent += `
                 <div class="user-data-item">
-                    <h3>ผลแบบทดสอบปรนัย</h3>
-                    <p class="no-data">ไม่มีข้อมูล</p>
-                </div>
+                    <h3>ไฟล์เสียงที่อัปโหลด</h3>
+                    <ul>
             `;
-            // TODO: โค้ดสำหรับแสดงผลคะแนนปรนัย
 
-            // --- ดึงข้อมูลคำตอบอัตนัย ---
-            const { data: essayAnswers, error: essayError } = await supabase
-                .from('essay_answers')
-                .select('*')
-                .eq('user_id', userId);
+            for (const submission of submissions) {
+                const audioUrl = submission.audio_url;
 
-            userContent += `
-                <div class="user-data-item">
-                    <h3>คำตอบอัตนัย</h3>
-                    <p class="no-data">ไม่มีข้อมูล</p>
-                </div>
-            `;
-            // TODO: โค้ดสำหรับแสดงผลคำตอบอัตนัย
-
-            // --- ดึงข้อมูลไฟล์เสียง ---
-            const { data: voiceAnswers, error: voiceError } = await supabase
-                .from('voice_answers')
-                .select('*')
-                .eq('user_id', userId);
-            
-            userContent += `
-                <div class="user-data-item">
-                    <h3>ไฟล์เสียง</h3>
-                    <p class="no-data">ไม่มีไฟล์เสียง</p>
-                </div>
-            `;
-            // TODO: โค้ดสำหรับแสดงผลและดาวน์โหลดไฟล์เสียง
-
-            filteredUserDataDiv.innerHTML = userContent;
-        }
-
-        // --- ฟังก์ชันออกจากระบบ ---
-        async function logout() {
-            const { error } = await supabase.auth.signOut();
-            if (error) {
-                console.error('Error logging out:', error);
+                if (audioUrl) {
+                    const fileName = audioUrl.substring(audioUrl.lastIndexOf('/') + 1);
+                    
+                    htmlContent += `
+                        <li>
+                            <span>${fileName}</span>
+                            <audio controls src="${audioUrl}"></audio>
+                            <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                        </li>
+                    `;
+                }
             }
-            window.location.href = 'index.html';
+
+            htmlContent += `</ul></div>`;
+            filteredUserDataDiv.innerHTML = htmlContent;
         }
 
-        // --- Event Listeners ---
-        logoutButton.addEventListener('click', logout);
-        emailFilterBtn.addEventListener('click', () => {
-            const email = emailFilterInput.value;
-            fetchUserDataByEmail(email);
-        });
-        dateFilterBtn.addEventListener('click', () => {
-            const date = dateFilterInput.value;
-            fetchUserDataByDate(date);
+        // --- Event Handlers ---
+
+        // Filter by Email
+        emailFilterBtn.addEventListener('click', async () => {
+            const email = emailFilterInput.value.trim();
+            if (!email) {
+                alert("กรุณาใส่อีเมลเพื่อค้นหา");
+                return;
+            }
+
+            const { data: userSubmissions, error: userError } = await supabase
+                .from('submissions')
+                .select('user_id, email')
+                .eq('email', email)
+                .limit(1);
+
+            if (userError || !userSubmissions || userSubmissions.length === 0) {
+                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับอีเมลนี้</p>`;
+                console.error('Error fetching user submissions:', userError);
+                return;
+            }
+
+            const userId = userSubmissions[0].user_id;
+            const userEmail = userSubmissions[0].email;
+            await fetchAllUserData(userId, userEmail);
         });
 
-        // --- เริ่มต้นการทำงานของหน้า Dashboard ---
+        // Filter by Date
+        dateFilterBtn.addEventListener('click', async () => {
+            const date = dateFilterInput.value;
+            if (!date) {
+                alert("กรุณาเลือกวันที่เพื่อค้นหา");
+                return;
+            }
+            
+            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
+
+            const startOfDay = `${date}T00:00:00.000Z`;
+            const endOfDay = `${date}T23:59:59.999Z`;
+
+            const { data: submissions, error: submissionsError } = await supabase
+                .from('submissions')
+                .select('*')
+                .gte('created_at', startOfDay)
+                .lte('created_at', endOfDay)
+                .order('created_at', { ascending: false });
+
+            if (submissionsError || !submissions || submissions.length === 0) {
+                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลสำหรับวันที่นี้</p>`;
+                return;
+            }
+
+            let htmlContent = `
+                <div class="user-data-item">
+                    <h3>ข้อมูลการส่งสำหรับวันที่ ${date}</h3>
+                </div>
+                <div class="user-data-item">
+                    <h3>รายการไฟล์เสียง</h3>
+                    <ul>
+            `;
+
+            for (const submission of submissions) {
+                const audioUrl = submission.audio_url;
+                if (audioUrl) {
+                    const fileName = audioUrl.substring(audioUrl.lastIndexOf('/') + 1);
+                    const userEmail = submission.email || 'ไม่ระบุอีเมล';
+
+                    htmlContent += `
+                        <li>
+                            <span><strong>จาก:</strong> ${userEmail} | ${fileName}</span>
+                            <audio controls src="${audioUrl}"></audio>
+                            <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                        </li>
+                    `;
+                }
+            }
+
+            htmlContent += `</ul></div>`;
+            filteredUserDataDiv.innerHTML = htmlContent;
+        });
+
+        // Logout button handler
+        logoutButton.addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            window.location.href = 'index.html';
+        });
+
+        // Run initial check when the page loads
         checkAdminAccess();
     </script>
 </body>
