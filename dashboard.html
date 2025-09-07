@@ -108,7 +108,7 @@
             border-radius: 4px;
             border: 1px solid #ccc;
         }
-        #loadDataButton {
+        #loadDataButton, #loadAudioButton {
             padding: 10px 15px;
             background-color: #007acc;
             color: white;
@@ -116,7 +116,7 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        #loadDataButton:hover {
+        #loadDataButton:hover, #loadAudioButton:hover {
             background-color: #005fa3;
         }
     </style>
@@ -130,20 +130,31 @@
     <div id="dashboardContent" style="display: none;">
         <div class="section user-info">
             <h3>ข้อมูลผู้ดูแลระบบ</h3>
-            <p><strong>ID:</strong> <span id="admin_1Id"></span></p>
-            <p><strong>อีเมล:</strong> <span id="admin_1Email"></span></p>
+            <p><strong>ID:</strong> <span id="adminId"></span></p>
+            <p><strong>อีเมล:</strong> <span id="adminEmail"></span></p>
         </div>
 
         <div class="section">
             <h3>ข้อมูลของผู้ใช้งาน (ตามวันที่)</h3>
             <div class="filter-container">
                 <input type="date" id="dateFilter" />
-                <button id="loadDataButton">แสดงข้อมูล</button>
+                <button id="loadDataButton">แสดงข้อมูลผู้ใช้</button>
+            </div>
+            <div id="filteredUserData">
+                <p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>
             </div>
         </div>
 
-        <div id="filteredUserData">
-            <p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>
+        <div class="section">
+            <h3>ไฟล์เสียงที่อัปโหลด</h3>
+            <div class="filter-container">
+                <button id="loadAudioButton">แสดงไฟล์เสียงทั้งหมด</button>
+                <button id="emailFilterBtn">กรองตามอีเมล</button>
+                <button id="testBtn">ปุ่มทดสอบ</button>
+            </div>
+            <div id="audioFileList">
+                <p class="no-data">กดปุ่ม "แสดงไฟล์เสียงทั้งหมด" เพื่อโหลดไฟล์</p>
+            </div>
         </div>
     </div>
     
@@ -158,6 +169,7 @@
         // **สำคัญ**: ใส่ user_id ของ Admin ของคุณที่นี่
         const ADMIN_USER_ID = '22034dab-2bcb-4624-b3ab-ace8da6474ba';
 
+        // --- ประกาศตัวแปรเพื่ออ้างอิงถึงองค์ประกอบ HTML ---
         const loadingDiv = document.getElementById('loading');
         const dashboardContent = document.getElementById('dashboardContent');
         const adminIdSpan = document.getElementById('adminId');
@@ -166,37 +178,26 @@
         const dateFilterInput = document.getElementById('dateFilter');
         const loadDataButton = document.getElementById('loadDataButton');
         const filteredUserDataDiv = document.getElementById('filteredUserData');
+        const loadAudioButton = document.getElementById('loadAudioButton');
+        const audioFileListDiv = document.getElementById('audioFileList');
+        const emailFilterBtn = document.getElementById('emailFilterBtn');
+        const testBtn = document.getElementById('testBtn');
 
+        // --- ฟังก์ชันหลักในการตรวจสอบสิทธิ์และแสดงข้อมูล ---
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            
             if (sessionError || !session || session.user.id !== ADMIN_USER_ID) {
                 alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
                 await supabase.auth.signOut();
-                window.location.href = 'index.html'; 
-                return false;
+                window.location.href = 'index.html';
+                return;
             }
 
-          // ประกาศตัวแปรเพื่ออ้างอิงถึงองค์ประกอบ HTML ก่อนนำไปใช้งาน
-const adminIdSpan = document.getElementById('admin-id-span');
-const adminEmailSpan = document.getElementById('admin-email-span');
-const loadingDiv = document.getElementById('loading-div');
-const dashboardContent = document.getElementById('dashboard-content');
-
-// ตรวจสอบว่ามีการล็อกอินและมีข้อมูลผู้ใช้หรือไม่
-if (session && session.user) {
-    // ถ้ามีข้อมูลผู้ใช้ ให้ดึงข้อมูลมาแสดงผล
-    const currentUser = session.user;
-    adminIdSpan.textContent = currentUser.id;
-    adminEmailSpan.textContent = currentUser.email;
-
-    // ซ่อนหน้าจอ Loading และแสดง Dashboard
-    loadingDiv.style.display = 'none';
-    dashboardContent.style.display = 'block';
-
-} else {
-    // ถ้าไม่มีข้อมูลผู้ใช้ ให้เปลี่ยนเส้นทางกลับไปหน้าล็อกอิน
-    window.location.href = 'index.html';
-}
+            // ถ้าตรวจสอบผ่าน
+            const currentUser = session.user;
+            adminIdSpan.textContent = currentUser.id;
+            adminEmailSpan.textContent = currentUser.email;
             
             // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
             const today = new Date();
@@ -205,146 +206,98 @@ if (session && session.user) {
             const day = today.getDate().toString().padStart(2, '0');
             dateFilterInput.value = `${year}-${month}-${day}`;
             
-            // โหลดข้อมูลของวันนี้ทันที
-            fetchUserDataByDate(dateFilterInput.value, currentUser.id);
-
-            return true;
+            // ซ่อนหน้าจอ Loading และแสดง Dashboard
+            loadingDiv.style.display = 'none';
+            dashboardContent.style.display = 'block';
         }
 
-        async function fetchUserDataByDate(date, userId) {
-            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
-            
-            const startOfDay = `${date}T00:00:00.000Z`;
-            const endOfDay = `${date}T23:59:59.999Z`;
-
-            let htmlContent = `
-                <div class="section user-info">
-                    <h3>ข้อมูลผู้ใช้งาน (สำหรับวันที่ ${date})</h3>
-                </div>
-            `;
-            
-            // --- ดึงข้อมูลคะแนนปรนัย ---
-            const { data: multipleChoiceAnswers, error: quizError } = await supabase
-                .from('multiple_choice_answers')
-                .select('is_correct')
-                .eq('user_id', userId)
-                .gte('submitted_at', startOfDay)
-                .lte('submitted_at', endOfDay);
-
-            htmlContent += `<div class="section quiz-results"><h3>ผลคะแนนแบบทดสอบปรนัย</h3>`;
-            if (quizError || !multipleChoiceAnswers || multipleChoiceAnswers.length === 0) {
-                htmlContent += `<p class="no-data">ยังไม่มีข้อมูลคะแนนปรนัยในวันนี้</p>`;
-            } else {
-                let score = 0;
-                let totalQuestions = multipleChoiceAnswers.length;
-                multipleChoiceAnswers.forEach(answer => {
-                    if (answer.is_correct) {
-                        score++;
-                    }
-                });
-                
-                const status = score >= (totalQuestions/2) ? 'ผ่าน' : 'ไม่ผ่าน';
-                const statusColor = score >= (totalQuestions/2) ? 'green' : 'red';
-                htmlContent += `
-                    <div>
-                        <p>คะแนน: ${score} / ${totalQuestions}</p>
-                        <p><strong>สถานะ:</strong> <span style="color: ${statusColor};">${status}</span></p>
-                    </div>
-                `;
+        // --- ฟังก์ชันดึงข้อมูลผู้ใช้ตามวันที่ ---
+        async function fetchUserDataByDate() {
+            const selectedDate = dateFilterInput.value;
+            if (!selectedDate) {
+                filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>';
+                return;
             }
-            htmlContent += `</div>`;
-            
-            // --- ดึงข้อมูลคำตอบอัตนัย ---
-            const { data: essayAnswers, error: subjectiveError } = await supabase
-                .from('essay_answers')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('submitted_at', startOfDay)
-                .lte('submitted_at', endOfDay)
-                .order('submitted_at', { ascending: false });
 
-            htmlContent += `<div class="section subjective-answers"><h3>คำตอบแบบทดสอบอัตนัย</h3>`;
-            if (subjectiveError || !essayAnswers || essayAnswers.length === 0) {
-                htmlContent += `<p class="no-data">ยังไม่มีข้อมูลคำตอบอัตนัยในวันนี้</p>`;
+            filteredUserDataDiv.innerHTML = `<div class="loading-text">กำลังโหลดข้อมูล...</div>`;
+
+            // ดึงข้อมูลจากฐานข้อมูลตามที่คุณกำหนด
+            const { data, error } = await supabase
+                .from('multiple_choice_answers') // สมมติว่านี่คือตารางที่เก็บข้อมูลของผู้ใช้
+                .select('*')
+                .gte('submitted_at', `${selectedDate}T00:00:00.000Z`)
+                .lte('submitted_at', `${selectedDate}T23:59:59.999Z`);
+
+            if (error || !data || data.length === 0) {
+                filteredUserDataDiv.innerHTML = `<p class="no-data">ไม่พบข้อมูลผู้ใช้สำหรับวันที่นี้</p>`;
             } else {
-                essayAnswers.forEach(answer => {
+                let htmlContent = '<h3>ข้อมูลผู้ใช้สำหรับวันที่ ' + selectedDate + '</h3>';
+                data.forEach(item => {
                     htmlContent += `
                         <div class="question-answer">
-                            <strong>คำถามที่ ${answer.question_number}:</strong>
-                            <span>${answer.answer_text}</span>
+                            <strong>User ID:</strong> <span>${item.user_id}</span><br>
+                            <strong>Status:</strong> <span>${item.is_correct ? 'Correct' : 'Incorrect'}</span>
                         </div>
                     `;
                 });
+                filteredUserDataDiv.innerHTML = htmlContent;
             }
-            htmlContent += `</div>`;
-
-            // --- ดึงรายการไฟล์เสียง ---
-            const { data: voiceAnswers, error: voiceError } = await supabase
-                .from('voice_answers')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('submitted_at', startOfDay)
-                .lte('submitted_at', endOfDay)
-                .order('submitted_at', { ascending: false });
-
-            htmlContent += `<div class="section audio-files"><h3>ไฟล์เสียงที่อัปโหลด</h3><div class="audio-list">`;
-            if (voiceError || !voiceAnswers || voiceAnswers.length === 0) {
-                htmlContent += `<p class="no-data">ยังไม่มีไฟล์เสียงในวันนี้</p>`;
-            } else {
-                htmlContent += '<ul>';
-                for (const answer of voiceAnswers) {
-                    if (answer.audio_url) {
-                        try {
-                            const audioUrl = answer.audio_url;
-                            const fileName = audioUrl.substring(audioUrl.lastIndexOf('/') + 1);
-                            
-                            htmlContent += `
-                                <li>
-                                    <span>คำถามที่ ${answer.question_number}: ${fileName}</span>
-                                    <audio controls src="${audioUrl}"></audio>
-                                    <a href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
-                                </li>
-                            `;
-                        } catch (e) {
-                            console.error(`Unexpected error with file: ${answer.audio_url}`, e);
-                            htmlContent += `<li><span>${answer.audio_url}</span><span>เกิดข้อผิดพลาดที่ไม่คาดคิด</span></li>`;
-                        }
-                    }
-                }
-                htmlContent += '</ul>';
-            }
-            htmlContent += `</div></div>`;
-
-            filteredUserDataDiv.innerHTML = htmlContent;
         }
 
+        // --- ฟังก์ชันดึงและแสดงไฟล์เสียงทั้งหมด ---
+        async function fetchAudioFiles() {
+            audioFileListDiv.innerHTML = `<div class="loading-text">กำลังโหลดไฟล์เสียง...</div>`;
+            const { data: fileList, error: listError } = await supabase.storage.from('audio-files').list();
+
+            if (listError) {
+                audioFileListDiv.innerHTML = `<p class="no-data">เกิดข้อผิดพลาดในการโหลดไฟล์: ${listError.message}</p>`;
+                return;
+            }
+
+            if (!fileList || fileList.length === 0) {
+                audioFileListDiv.innerHTML = `<p class="no-data">ไม่พบไฟล์เสียงใน Bucket</p>`;
+                return;
+            }
+
+            let fileListHTML = '<ul>';
+            for (const file of fileList) {
+                if (file.name === '.emptyFolderPlaceholder') continue; // ข้ามไฟล์ที่ไม่ต้องการ
+                const { data: publicUrl, error: urlError } = supabase.storage.from('audio-files').getPublicUrl(file.name);
+                
+                if (urlError) {
+                    console.error('Error getting public URL:', urlError);
+                    continue;
+                }
+                
+                fileListHTML += `
+                    <li>
+                        <span>${file.name}</span>
+                        <a href="${publicUrl.publicUrl}" download="${file.name}">ดาวน์โหลด</a>
+                    </li>
+                `;
+            }
+            fileListHTML += '</ul>';
+            audioFileListDiv.innerHTML = fileListHTML;
+        }
+        
+        // --- ฟังก์ชันออกจากระบบ ---
         async function logout() {
             const { error } = await supabase.auth.signOut();
             if (error) {
                 console.error('Error logging out:', error);
-                alert('เกิดข้อผิดพลาดในการออกจากระบบ');
-            } else {
-                alert('ออกจากระบบเรียบร้อย');
-                window.location.href = 'index.html'; 
             }
+            window.location.href = 'index.html';
         }
 
-        // Event listeners
+        // --- Event Listeners สำหรับปุ่มต่างๆ ---
         logoutButton.addEventListener('click', logout);
-        loadDataButton.addEventListener('click', () => {
-            const selectedDate = dateFilterInput.value;
-            if (selectedDate) {
-                fetchUserDataByDate(selectedDate, ADMIN_USER_ID);
-            } else {
-                filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>';
-            }
-        });
+        loadDataButton.addEventListener('click', fetchUserDataByDate);
+        loadAudioButton.addEventListener('click', fetchAudioFiles);
+        emailFilterBtn.addEventListener('click', () => alert('ฟังก์ชันกรองตามอีเมลยังไม่พร้อมใช้งาน'));
+        testBtn.addEventListener('click', () => alert('ปุ่มทดสอบทำงานแล้ว!'));
 
-        // Initial check for admin access
+        // --- เริ่มต้นการทำงานของหน้า Dashboard ---
         checkAdminAccess();
     </script>
 </body>
 </html>
-
-
-
