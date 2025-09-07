@@ -176,12 +176,27 @@
                 return false;
             }
 
-           const currentUser = session.user;
-adminIdSpan.textContent = currentUser.id;
-adminEmailSpan.textContent = currentUser.email;
+          // ประกาศตัวแปรเพื่ออ้างอิงถึงองค์ประกอบ HTML ก่อนนำไปใช้งาน
+const adminIdSpan = document.getElementById('admin-id-span');
+const adminEmailSpan = document.getElementById('admin-email-span');
+const loadingDiv = document.getElementById('loading-div');
+const dashboardContent = document.getElementById('dashboard-content');
 
-loadingDiv.style.display = 'none';
-dashboardContent.style.display = 'block';
+// ตรวจสอบว่ามีการล็อกอินและมีข้อมูลผู้ใช้หรือไม่
+if (session && session.user) {
+    // ถ้ามีข้อมูลผู้ใช้ ให้ดึงข้อมูลมาแสดงผล
+    const currentUser = session.user;
+    adminIdSpan.textContent = currentUser.id;
+    adminEmailSpan.textContent = currentUser.email;
+
+    // ซ่อนหน้าจอ Loading และแสดง Dashboard
+    loadingDiv.style.display = 'none';
+    dashboardContent.style.display = 'block';
+
+} else {
+    // ถ้าไม่มีข้อมูลผู้ใช้ ให้เปลี่ยนเส้นทางกลับไปหน้าล็อกอิน
+    window.location.href = 'index.html';
+}
             
             // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
             const today = new Date();
@@ -330,5 +345,6 @@ dashboardContent.style.display = 'block';
     </script>
 </body>
 </html>
+
 
 
