@@ -66,7 +66,7 @@
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
     const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-    const supabaseKey = 'YOUR_ANON_KEY_HERE'; // ควรใช้ anon key เท่านั้น
+    const supabaseKey = 'YOUR_ANON_KEY_HERE'; // ใช้ anon key เท่านั้น
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const loginForm = document.getElementById('loginForm');
@@ -85,7 +85,7 @@
                 return;
             }
 
-            // ตรวจสอบว่า email อยู่ในตาราง admins หรือไม่
+            // ตรวจสอบสิทธิ์ admin
             const { data: adminData, error: adminError } = await supabase
                 .from('admins')
                 .select('email')
@@ -98,11 +98,11 @@
                 return;
             }
 
-            // ✅ redirect หลัง login สำเร็จ
+            // ✅ redirect ไปหน้า dashboard
             alert('เข้าสู่ระบบสำเร็จ! กำลังเปลี่ยนเส้นทาง...');
             setTimeout(() => {
                 window.location.assign('dashboard.html');
-            }, 500); // หน่วงเวลาเล็กน้อยเพื่อให้ alert แสดงก่อน redirect
+            }, 500);
 
         } catch (err) {
             console.error('เกิดข้อผิดพลาด:', err);
@@ -112,5 +112,6 @@
 </script>
 </body>
 </html>
+
 
 
