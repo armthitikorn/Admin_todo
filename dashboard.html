@@ -150,9 +150,13 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+        // **สำคัญ**: แทนที่ด้วยข้อมูล Supabase Project ของคุณ
         const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // **สำคัญ**: ใส่ user_id ของ Admin ของคุณที่นี่
+        const ADMIN_USER_ID = '22034dab-2bcb-4624-b3ab-ace8da6474ba';
 
         const loadingDiv = document.getElementById('loading');
         const dashboardContent = document.getElementById('dashboardContent');
@@ -165,28 +169,16 @@
 
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !session) {
-                alert("กรุณาเข้าสู่ระบบเพื่อเข้าถึง Dashboard");
-                window.location.href = 'index.html'; 
-                return false;
-            }
-
-            const currentUser = session.user;
-            const { data: adminData, error: adminError } = await supabase
-                .from('admins')
-                .select('email, user_id')
-                .eq('email', currentUser.email)
-                .single();
-
-            if (adminError || !adminData) {
+            if (sessionError || !session || session.user.id !== ADMIN_USER_ID) {
                 alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
                 await supabase.auth.signOut();
                 window.location.href = 'index.html'; 
                 return false;
             }
-            
-            adminIdSpan.textContent = adminData.user_id;
-            adminEmailSpan.textContent = adminData.email;
+
+            const currentUser = session.user;
+            adminIdSpan.textContent = currentUser.id;
+            adminEmailSpan.textContent = currentUser.email;
             
             loadingDiv.style.display = 'none';
             dashboardContent.style.display = 'block';
@@ -199,7 +191,7 @@
             dateFilterInput.value = `${year}-${month}-${day}`;
             
             // โหลดข้อมูลของวันนี้ทันที
-            fetchUserDataByDate(dateFilterInput.value, adminData.user_id);
+            fetchUserDataByDate(dateFilterInput.value, currentUser.id);
 
             return true;
         }
@@ -327,8 +319,7 @@
         loadDataButton.addEventListener('click', () => {
             const selectedDate = dateFilterInput.value;
             if (selectedDate) {
-                const adminId = document.getElementById('adminId').textContent;
-                fetchUserDataByDate(selectedDate, adminId);
+                fetchUserDataByDate(selectedDate, ADMIN_USER_ID);
             } else {
                 filteredUserDataDiv.innerHTML = '<p class="no-data">กรุณาเลือกวันที่เพื่อแสดงข้อมูล</p>';
             }
@@ -339,5 +330,3 @@
     </script>
 </body>
 </html>
-
-
