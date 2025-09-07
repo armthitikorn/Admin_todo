@@ -176,12 +176,12 @@
                 return false;
             }
 
-            const currentUser = session.user;
-            adminIdSpan.textContent = currentUser.id;
-            adminEmailSpan.textContent = currentUser.email;
-            
-            loadingDiv.style.display = 'none';
-            dashboardContent.style.display = 'block';
+           const currentUser = session.user;
+adminIdSpan.textContent = currentUser.id;
+adminEmailSpan.textContent = currentUser.email;
+
+loadingDiv.style.display = 'none';
+dashboardContent.style.display = 'block';
             
             // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
             const today = new Date();
@@ -330,4 +330,5 @@
     </script>
 </body>
 </html>
+
 
