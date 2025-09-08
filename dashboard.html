@@ -235,7 +235,10 @@
                         <li>
                             <span>${fileName}</span>
                             <div class="audio-controls">
-                                <audio controls src="${audioUrl}"></audio>
+                                <audio controls>
+                                    <source src="${audioUrl}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
                                 <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
                             </div>
                         </li>
@@ -314,7 +317,10 @@
                         <li>
                             <span><strong>จาก:</strong> ${userEmail} | ${fileName}</span>
                             <div class="audio-controls">
-                                <audio controls src="${audioUrl}"></audio>
+                                <audio controls>
+                                    <source src="${audioUrl}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
                                 <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
                             </div>
                         </li>
