@@ -95,6 +95,16 @@
             margin: 0;
             margin-bottom: 5px;
         }
+        .audio-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 10px;
+        }
+        .audio-controls audio {
+            width: 100%;
+            max-width: 400px;
+        }
         .download-btn {
             background-color: #28a745;
             color: white;
@@ -105,6 +115,9 @@
             text-decoration: none;
             display: inline-block;
             margin-top: 10px;
+        }
+        .download-btn:hover {
+            background-color: #218838;
         }
     </style>
 </head>
@@ -221,8 +234,10 @@
                     htmlContent += `
                         <li>
                             <span>${fileName}</span>
-                            <audio controls src="${audioUrl}"></audio>
-                            <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                            <div class="audio-controls">
+                                <audio controls src="${audioUrl}"></audio>
+                                <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                            </div>
                         </li>
                     `;
                 }
@@ -298,8 +313,10 @@
                     htmlContent += `
                         <li>
                             <span><strong>จาก:</strong> ${userEmail} | ${fileName}</span>
-                            <audio controls src="${audioUrl}"></audio>
-                            <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                            <div class="audio-controls">
+                                <audio controls src="${audioUrl}"></audio>
+                                <a class="download-btn" href="${audioUrl}" download="${fileName}">ดาวน์โหลด</a>
+                            </div>
                         </li>
                     `;
                 }
