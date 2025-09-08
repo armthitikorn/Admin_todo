@@ -232,7 +232,7 @@
                 await fetchAndDisplaySubjectiveAnswers(filter);
             }
         }
-
+        
         async function fetchAndDisplaySubmissions(filter = {}) {
             let query = supabase.from('submissions').select('*');
             if (filter.email) {
@@ -402,4 +402,3 @@
     </script>
 </body>
 </html>
-
