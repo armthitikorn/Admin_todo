@@ -292,7 +292,7 @@
 
             let htmlContent = `<ul class="data-list">`;
             subjectiveAnswers.forEach(answer => {
-                const userEmail = answer.email || 'ไม่ระบุอีเมล';
+                const userEmail = answer.user_email || 'ไม่ระบุอีเมล';
                 htmlContent += `
                     <li>
                         <strong>จาก:</strong> ${userEmail}<br>
@@ -325,4 +325,3 @@
     </script>
 </body>
 </html>
-
