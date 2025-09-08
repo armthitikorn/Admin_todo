@@ -59,6 +59,7 @@
         }
         .filter-container {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             gap: 10px;
             margin-bottom: 20px;
@@ -159,6 +160,18 @@
             <button class="tab-button" data-tab="subjective-answers">คำตอบอัตนัย</button>
         </div>
         
+        <div class="section">
+            <h3>ค้นหาข้อมูลผู้ใช้งาน</h3>
+            <div class="filter-container">
+                <input type="email" id="emailFilterInput" placeholder="กรอกอีเมลผู้ใช้" />
+                <button id="emailFilterBtn">กรองตามอีเมล</button>
+            </div>
+            <div class="filter-container">
+                <input type="date" id="dateFilterInput" />
+                <button id="dateFilterBtn">กรองตามวันที่</button>
+            </div>
+        </div>
+        
         <div id="data-view-container">
             <p class="loading-text">กำลังโหลดข้อมูล...</p>
         </div>
@@ -182,6 +195,11 @@
         const logoutButton = document.getElementById('logoutButton');
         const dataViewContainer = document.getElementById('data-view-container');
         const tabButtons = document.querySelectorAll('.tab-button');
+        const emailFilterInput = document.getElementById('emailFilterInput');
+        const emailFilterBtn = document.getElementById('emailFilterBtn');
+        const dateFilterInput = document.getElementById('dateFilterInput');
+        const dateFilterBtn = document.getElementById('dateFilterBtn');
+        const allFilters = [emailFilterInput, dateFilterInput, emailFilterBtn, dateFilterBtn];
 
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -202,33 +220,51 @@
 
             // แสดงผลข้อมูลเริ่มต้น
             displayData('voice-answers');
+            updateFilterState('voice-answers');
         }
 
-        async function displayData(dataType) {
+        async function displayData(dataType, filter = {}) {
             dataViewContainer.innerHTML = `<p class="loading-text">กำลังโหลดข้อมูล...</p>`;
 
             if (dataType === 'voice-answers') {
-                await fetchAndDisplaySubmissions();
+                await fetchAndDisplaySubmissions(filter);
             } else if (dataType === 'quiz-results') {
-                await fetchAndDisplayQuizResults();
+                await fetchAndDisplayQuizResults(filter);
             } else if (dataType === 'subjective-answers') {
-                await fetchAndDisplaySubjectiveAnswers();
+                await fetchAndDisplaySubjectiveAnswers(filter);
+            }
+        }
+        
+        function updateFilterState(dataType) {
+            if (dataType === 'voice-answers') {
+                allFilters.forEach(el => el.style.display = 'flex');
+            } else {
+                allFilters.forEach(el => el.style.display = 'none');
             }
         }
 
-        async function fetchAndDisplaySubmissions() {
-            const { data: submissions, error } = await supabase
-                .from('submissions')
-                .select('*')
-                .order('created_at', { ascending: false });
+        async function fetchAndDisplaySubmissions(filter = {}) {
+            let query = supabase.from('submissions').select('*');
+            if (filter.email) {
+                query = query.eq('email', filter.email);
+            }
+            if (filter.date) {
+                const startOfDay = `${filter.date}T00:00:00.000Z`;
+                const endOfDay = `${filter.date}T23:59:59.999Z`;
+                query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+            }
+            
+            query = query.order('created_at', { ascending: false });
+            
+            const { data: submissions, error } = await query;
 
             if (error || !submissions || submissions.length === 0) {
                 dataViewContainer.innerHTML = `<p class="no-data">ไม่พบข้อมูลไฟล์เสียง</p>`;
                 return;
             }
-
+            
             let htmlContent = `<ul class="data-list">`;
-            submissions.forEach(submission => {
+            for (const submission of submissions) {
                 const userEmail = submission.email || 'ไม่ระบุอีเมล';
                 const audioUrl = submission.audio_url;
                 const fileName = audioUrl ? audioUrl.substring(audioUrl.lastIndexOf('/') + 1) : 'ไม่พบไฟล์';
@@ -248,7 +284,7 @@
                         ` : ''}
                     </li>
                 `;
-            });
+            }
             htmlContent += `</ul>`;
             dataViewContainer.innerHTML = htmlContent;
         }
@@ -311,8 +347,27 @@
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 const dataType = e.target.getAttribute('data-tab');
+                updateFilterState(dataType);
                 displayData(dataType);
             });
+        });
+        
+        emailFilterBtn.addEventListener('click', async () => {
+            const email = emailFilterInput.value.trim();
+            if (!email) {
+                alert("กรุณาใส่อีเมลเพื่อค้นหา");
+                return;
+            }
+            displayData('voice-answers', { email: email });
+        });
+
+        dateFilterBtn.addEventListener('click', async () => {
+            const date = dateFilterInput.value;
+            if (!date) {
+                alert("กรุณาเลือกวันที่เพื่อค้นหา");
+                return;
+            }
+            displayData('voice-answers', { date: date });
         });
 
         logoutButton.addEventListener('click', async () => {
@@ -320,7 +375,6 @@
             window.location.href = 'index.html';
         });
 
-        // Initial check and display
         checkAdminAccess();
     </script>
 </body>
