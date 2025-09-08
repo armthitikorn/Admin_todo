@@ -342,8 +342,10 @@
                 
                 // ดึงข้อมูลคำตอบจากคอลัมน์ `answers` ซึ่งเป็น JSON
                 let answerText = 'ไม่พบคำตอบ';
-                if (answer.answers && answer.answers.length > 0) {
-                    answerText = answer.answers.map(item => item.text).join(', ');
+                if (answer.answers && Array.isArray(answer.answers)) {
+                    answerText = answer.answers.map(item => item && item.text ? item.text : 'ไม่มีคำตอบ').join('<br>');
+                } else if (answer.answers && typeof answer.answers === 'object') {
+                    answerText = answer.answers.text || 'ไม่มีคำตอบ';
                 }
                 
                 htmlContent += `
@@ -402,4 +404,3 @@
     </script>
 </body>
 </html>
-
