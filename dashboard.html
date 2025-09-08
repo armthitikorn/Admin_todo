@@ -199,7 +199,6 @@
         const emailFilterBtn = document.getElementById('emailFilterBtn');
         const dateFilterInput = document.getElementById('dateFilterInput');
         const dateFilterBtn = document.getElementById('dateFilterBtn');
-        const allFilters = [emailFilterInput, dateFilterInput, emailFilterBtn, dateFilterBtn];
 
         async function checkAdminAccess() {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -220,7 +219,6 @@
 
             // แสดงผลข้อมูลเริ่มต้น
             displayData('voice-answers');
-            updateFilterState('voice-answers');
         }
 
         async function displayData(dataType, filter = {}) {
@@ -232,14 +230,6 @@
                 await fetchAndDisplayQuizResults(filter);
             } else if (dataType === 'subjective-answers') {
                 await fetchAndDisplaySubjectiveAnswers(filter);
-            }
-        }
-        
-        function updateFilterState(dataType) {
-            if (dataType === 'voice-answers') {
-                allFilters.forEach(el => el.style.display = 'flex');
-            } else {
-                allFilters.forEach(el => el.style.display = 'none');
             }
         }
 
@@ -289,11 +279,20 @@
             dataViewContainer.innerHTML = htmlContent;
         }
 
-        async function fetchAndDisplayQuizResults() {
-            const { data: quizResults, error } = await supabase
-                .from('quiz_results')
-                .select('*')
-                .order('created_at', { ascending: false });
+        async function fetchAndDisplayQuizResults(filter = {}) {
+            let query = supabase.from('quiz_results').select('*');
+            if (filter.email) {
+                query = query.eq('user_email', filter.email);
+            }
+            if (filter.date) {
+                const startOfDay = `${filter.date}T00:00:00.000Z`;
+                const endOfDay = `${filter.date}T23:59:59.999Z`;
+                query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+            }
+            
+            query = query.order('created_at', { ascending: false });
+
+            const { data: quizResults, error } = await query;
 
             if (error || !quizResults || quizResults.length === 0) {
                 dataViewContainer.innerHTML = `<p class="no-data">ไม่พบข้อมูลคะแนนปรนัย</p>`;
@@ -303,10 +302,12 @@
             let htmlContent = `<ul class="data-list">`;
             quizResults.forEach(result => {
                 const userEmail = result.user_email || 'ไม่ระบุอีเมล';
+                const answers = Array.isArray(result.text) ? result.text.join(', ') : 'ไม่มีคำตอบ';
                 htmlContent += `
                     <li>
                         <strong>จาก:</strong> ${userEmail}<br>
                         <strong>คะแนน:</strong> ${result.score} จาก ${result.total_questions}<br>
+                        <strong>คำตอบปรนัย:</strong> ${answers}<br>
                         <strong>วันที่:</strong> ${new Date(result.created_at).toLocaleString()}
                     </li>
                 `;
@@ -315,11 +316,20 @@
             dataViewContainer.innerHTML = htmlContent;
         }
 
-        async function fetchAndDisplaySubjectiveAnswers() {
-            const { data: subjectiveAnswers, error } = await supabase
-                .from('subjective_answers')
-                .select('*')
-                .order('created_at', { ascending: false });
+        async function fetchAndDisplaySubjectiveAnswers(filter = {}) {
+            let query = supabase.from('subjective_answers').select('*');
+            if (filter.email) {
+                query = query.eq('user_email', filter.email);
+            }
+            if (filter.date) {
+                const startOfDay = `${filter.date}T00:00:00.000Z`;
+                const endOfDay = `${filter.date}T23:59:59.999Z`;
+                query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
+            }
+            
+            query = query.order('created_at', { ascending: false });
+            
+            const { data: subjectiveAnswers, error } = await query;
 
             if (error || !subjectiveAnswers || subjectiveAnswers.length === 0) {
                 dataViewContainer.innerHTML = `<p class="no-data">ไม่พบข้อมูลคำตอบอัตนัย</p>`;
@@ -329,10 +339,17 @@
             let htmlContent = `<ul class="data-list">`;
             subjectiveAnswers.forEach(answer => {
                 const userEmail = answer.user_email || 'ไม่ระบุอีเมล';
+                
+                // ดึงข้อมูลคำตอบจากคอลัมน์ `answers` ซึ่งเป็น JSON
+                let answerText = 'ไม่พบคำตอบ';
+                if (answer.answers && answer.answers.length > 0) {
+                    answerText = answer.answers.map(item => item.text).join(', ');
+                }
+                
                 htmlContent += `
                     <li>
                         <strong>จาก:</strong> ${userEmail}<br>
-                        <strong>คำตอบ:</strong> ${answer.answer_text}<br>
+                        <strong>คำตอบ:</strong> ${answerText}<br>
                         <strong>วันที่:</strong> ${new Date(answer.created_at).toLocaleString()}
                     </li>
                 `;
@@ -347,27 +364,33 @@
                 tabButtons.forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
                 const dataType = e.target.getAttribute('data-tab');
-                updateFilterState(dataType);
+                // ล้างค่าฟิลเตอร์เมื่อเปลี่ยน tab
+                emailFilterInput.value = '';
+                dateFilterInput.value = '';
                 displayData(dataType);
             });
         });
         
         emailFilterBtn.addEventListener('click', async () => {
             const email = emailFilterInput.value.trim();
+            const date = dateFilterInput.value;
+            const activeTab = document.querySelector('.tab-button.active').getAttribute('data-tab');
             if (!email) {
                 alert("กรุณาใส่อีเมลเพื่อค้นหา");
                 return;
             }
-            displayData('voice-answers', { email: email });
+            displayData(activeTab, { email: email, date: date });
         });
 
         dateFilterBtn.addEventListener('click', async () => {
             const date = dateFilterInput.value;
+            const email = emailFilterInput.value.trim();
+            const activeTab = document.querySelector('.tab-button.active').getAttribute('data-tab');
             if (!date) {
                 alert("กรุณาเลือกวันที่เพื่อค้นหา");
                 return;
             }
-            displayData('voice-answers', { date: date });
+            displayData(activeTab, { email: email, date: date });
         });
 
         logoutButton.addEventListener('click', async () => {
@@ -379,3 +402,4 @@
     </script>
 </body>
 </html>
+
