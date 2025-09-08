@@ -340,12 +340,24 @@
             subjectiveAnswers.forEach(answer => {
                 const userEmail = answer.user_email || 'ไม่ระบุอีเมล';
                 
-                // ดึงข้อมูลคำตอบจากคอลัมน์ `answers` ซึ่งเป็น JSON
+                // แก้ไขการดึงข้อมูลเพื่อให้สามารถจัดการกับข้อมูลได้หลายรูปแบบ
                 let answerText = 'ไม่พบคำตอบ';
-                if (answer.answers && Array.isArray(answer.answers)) {
-                    answerText = answer.answers.map(item => item && item.text ? item.text : 'ไม่มีคำตอบ').join('<br>');
-                } else if (answer.answers && typeof answer.answers === 'object') {
-                    answerText = answer.answers.text || 'ไม่มีคำตอบ';
+                if (answer.answers) {
+                    if (Array.isArray(answer.answers)) {
+                        // กรณีเป็น Array เช่น ["คำตอบ 1", "คำตอบ 2"]
+                        const cleanAnswers = answer.answers.filter(Boolean); // กรองค่า null/undefined
+                        answerText = cleanAnswers.join('<br>');
+                    } else if (typeof answer.answers === 'object' && answer.answers !== null && Array.isArray(answer.answers.answers)) {
+                         // กรณีเป็น Object ที่มี answers ข้างใน เช่น { answers: ["คำตอบ 1"] }
+                        const cleanAnswers = answer.answers.answers.filter(Boolean);
+                        answerText = cleanAnswers.join('<br>');
+                    } else if (typeof answer.answers === 'object' && answer.answers !== null) {
+                        // กรณีเป็น Object ที่มี text ข้างใน เช่น { "text": "คำตอบ" }
+                        answerText = answer.answers.text || 'ไม่มีคำตอบ';
+                    } else if (typeof answer.answers === 'string') {
+                        // กรณีเป็น String ธรรมดา
+                         answerText = answer.answers;
+                    }
                 }
                 
                 htmlContent += `
