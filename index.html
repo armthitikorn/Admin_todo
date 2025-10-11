@@ -89,14 +89,7 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if (user === 'admin' && pass === '123456') {
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard-container').style.display = 'block';
-                loadResults();
-            } else {
+         else {
                 alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
             }
         }
@@ -133,5 +126,15 @@
             });
         }
     </script>
+<script>
+function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === '123456') {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('dashboard-container').style.display = 'block';
+                loadResults();
+            }
+</script>
 </body>
-
+</html>
