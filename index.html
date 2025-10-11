@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <title>Dashboard - Roleplay Test</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
+<meta charset="utf-8"/>
+<title>Dashboard - Roleplay Test</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
         body {
             margin: 0;
             font-family: 'Segoe UI', sans-serif;
@@ -70,26 +71,34 @@
     </style>
 </head>
 <body>
-    <div class="login-container" id="login-container">
-        <h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
-        <input type="text" id="username" placeholder="ชื่อผู้ใช้">
-        <input type="password" id="password" placeholder="รหัสผ่าน">
-        <button onclick="login()">เข้าสู่ระบบ</button>
-    </div>
-
-    <div class="dashboard-container" id="dashboard-container" style="display:none;">
-        <h2>Dashboard - ผลการสอบ Roleplay</h2>
-        <div id="results"></div>
-    </div>
-
-    <script type="module">
+<div class="login-container" id="login-container">
+<h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
+<input id="username" placeholder="ชื่อผู้ใช้" type="text"/>
+<input id="password" placeholder="รหัสผ่าน" type="password"/>
+<button onclick="login()">เข้าสู่ระบบ</button>
+</div>
+<div class="dashboard-container" id="dashboard-container" style="display:none;">
+<h2>Dashboard - ผลการสอบ Roleplay</h2>
+<div id="results"></div>
+</div>
+<script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-         else {
+        
+}</script>
+<script>function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === '123456') {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('dashboard-container').style.display = 'block';
+                loadResults();
+            } 
+else {
                 alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
             }
         }
@@ -125,16 +134,5 @@
                 container.appendChild(card);
             });
         }
-    </script>
-<script>
-function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if (user === 'admin' && pass === '123456') {
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard-container').style.display = 'block';
-                loadResults();
-            }
-</script>
-</body>
+    </script></body>
 </html>
