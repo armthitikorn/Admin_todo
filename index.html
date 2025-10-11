@@ -1,116 +1,137 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard หัวหน้า</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet"/>
-  <style>
-    body {
-      background: linear-gradient(-45deg, #6a11cb, #2575fc, #6a11cb);
-      background-size: 400% 400%;
-      animation: gradientBG 15s ease infinite;
-      min-height: 100vh;
-    }
-    @keyframes gradientBG {
-      0% {background-position: 0% 50%;}
-      50% {background-position: 100% 50%;}
-      100% {background-position: 0% 50%;}
-    }
-    .card {
-      animation: fadeIn 1s ease-in;
-      border-radius: 1rem;
-    }
-    @keyframes fadeIn {
-      from {opacity: 0; transform: translateY(20px);}
-      to {opacity: 1; transform: translateY(0);}
-    }
-    .hidden { display: none; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Dashboard - Roleplay Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+            color: #333;
+        }
+        .login-container, .dashboard-container {
+            max-width: 600px;
+            margin: 80px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            animation: fadeIn 1s ease-in-out;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #74ebd5;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #4ac9c0;
+        }
+        .card {
+            background: #f9f9f9;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        .card h4 {
+            margin: 0 0 10px;
+        }
+        .card a {
+            color: #0077cc;
+            text-decoration: none;
+        }
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        @keyframes fadeInUp {
+            from {opacity: 0; transform: translateY(20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+    </style>
 </head>
 <body>
-  <div class="container py-5">
-    <div id="loginCard" class="card p-4 mx-auto shadow-lg" style="max-width: 400px;">
-      <h4 class="text-center mb-3 text-primary">เข้าสู่ระบบหัวหน้า</h4>
-      <div class="mb-3">
-        <label for="username" class="form-label">ชื่อผู้ใช้:</label>
-        <input type="text" id="username" class="form-control" required />
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">รหัสผ่าน:</label>
-        <input type="password" id="password" class="form-control" required />
-      </div>
-      <button id="loginBtn" class="btn btn-success w-100">เข้าสู่ระบบ</button>
-      <div id="loginMsg" class="mt-3 text-center text-danger hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+    <div class="login-container" id="login-container">
+        <h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
+        <input type="text" id="username" placeholder="ชื่อผู้ใช้">
+        <input type="password" id="password" placeholder="รหัสผ่าน">
+        <button onclick="login()">เข้าสู่ระบบ</button>
     </div>
 
-    <div id="dashboardCard" class="card p-4 mt-4 shadow-lg hidden">
-      <h4 class="text-center mb-4 text-primary">Dashboard ผู้เข้าสอบ</h4>
-      <table class="table table-bordered table-hover table-striped">
-        <thead class="table-dark">
-          <tr>
-            <th>ชื่อผู้เข้าสอบ</th>
-            <th>จำนวนข้อที่ทำ</th>
-            <th>ไฟล์เสียง</th>
-            <th>ไฟล์คำตอบ</th>
-          </tr>
-        </thead>
-        <tbody id="resultTable"></tbody>
-      </table>
+    <div class="dashboard-container" id="dashboard-container" style="display:none;">
+        <h2>Dashboard - ผลการสอบ Roleplay</h2>
+        <div id="results"></div>
     </div>
-  </div>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-    const supabaseKey = 'YOUR_SUPABASE_KEY';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const loginBtn = document.getElementById("loginBtn");
-    const loginCard = document.getElementById("loginCard");
-    const dashboardCard = document.getElementById("dashboardCard");
-    const loginMsg = document.getElementById("loginMsg");
+        function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === '123456') {
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('dashboard-container').style.display = 'block';
+                loadResults();
+            } else {
+                alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+            }
+        }
 
-    loginBtn.addEventListener("click", () => {
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      if (username === "admin" && password === "123456") {
-        loginCard.classList.add("hidden");
-        dashboardCard.classList.remove("hidden");
-        fetchResults();
-      } else {
-        loginMsg.classList.remove("hidden");
-      }
-    });
+        async function loadResults() {
+            const { data: quizResults } = await supabase.from('Quiz_results').select('*');
+            const { data: subjectiveAnswers } = await supabase.from('subjective_answers').select('*');
+            const { data: tableAudios } = await supabase.from('table_audios').select('*');
 
-    async function fetchResults() {
-      const { data, error } = await supabase
-        .from('test_results')
-        .select('*')
-        .order('created_at', { ascending: false });
+            const container = document.getElementById('results');
+            container.innerHTML = '';
 
-      const table = document.getElementById("resultTable");
-      table.innerHTML = "";
+            const users = new Set([
+                ...quizResults.map(r => r.name),
+                ...subjectiveAnswers.map(r => r.name),
+                ...tableAudios.map(r => r.name)
+            ]);
 
-      if (error) {
-        table.innerHTML = `<tr><td colspan="4" class="text-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
-        console.error(error);
-        return;
-      }
+            users.forEach(name => {
+                const quiz = quizResults.filter(r => r.name === name);
+                const subjective = subjectiveAnswers.find(r => r.name === name);
+                const audio = tableAudios.find(r => r.name === name);
 
-      data.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${row.full_name}</td>
-          <td>${row.total_questions}</td>
-          <td><a href="${row.audio_url}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-volume-up"></i> ฟังเสียง</a></td>
-          <td><a href="${row.answer_url}" target="_blank" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-text"></i> ดาวน์โหลดคำตอบ</a></td>
-        `;
-        table.appendChild(tr);
-      });
-    }
-  </script>
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                card.innerHTML = `
+                    <h4>ชื่อผู้เข้าสอบ: ${name}</h4>
+                    <p>จำนวนข้อที่ทำ: ${quiz.length}</p>
+                    <p><a href="${audio?.audio_url || '#'}" target="_blank">🔊 ไฟล์เสียง</a></p>
+                    <p><a href="${subjective?.answer_url || '#'}" target="_blank">📄 ไฟล์คำตอบ</a></p>
+                `;
+                container.appendChild(card);
+            });
+        }
+    </script>
 </body>
-</html>
+
