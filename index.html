@@ -1,154 +1,117 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <title>Roleplay Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Dashboard - Roleplay Audios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: linear-gradient(to right, #74ebd5, #ACB6E5);
+      color: #333;
     }
     .container {
+      max-width: 1000px;
+      margin: auto;
       padding: 20px;
     }
+    h1 {
+      text-align: center;
+      color: #fff;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 2px #000;
+    }
     .card {
-      background: white;
+      background: #fff;
       border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 15px;
+      margin: 10px 0;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       animation: fadeIn 0.5s ease-in-out;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      color: #0077b6;
+    }
+    .card p {
+      margin: 5px 0;
     }
     @keyframes fadeIn {
       from {opacity: 0;}
       to {opacity: 1;}
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    .export-buttons {
-      margin-top: 10px;
-    }
-    .export-buttons button {
-      margin-right: 10px;
-      padding: 8px 12px;
-      border: none;
-      background-color: #4CAF50;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
+    @media (max-width: 600px) {
+      .card {
+        padding: 10px;
+      }
     }
   </style>
 </head>
 <body>
+
+<div id="loginSection" style="text-align:center; margin-top:50px;">
+  <h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
+  <input type="text" id="username" placeholder="ชื่อผู้ใช้" style="padding:10px; margin:5px;">
+  <input type="password" id="password" placeholder="รหัสผ่าน" style="padding:10px; margin:5px;">
+  <br>
+  <button onclick="login()" style="padding:10px 20px; margin-top:10px;">เข้าสู่ระบบ</button>
+</div>
+<script>
+function login() {
+  const user = document.getElementById('username').value;
+  const pass = document.getElementById('password').value;
+  if (user === 'admin' && pass === '123456') {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+  } else {
+    alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  }
+}
+</script>
+
+<div id="dashboard" style="display:none;">
   <div class="container">
-    <div class="card">
-      <h2>📊 Roleplay Test Dashboard</h2>
-      <table id="resultsTable">
-        <thead>
-          <tr>
-            <th>ชื่อผู้เข้าสอบ</th>
-            <th>จำนวนข้อที่ทำ</th>
-            <th>ไฟล์เสียง</th>
-            <th>ไฟล์คำตอบ</th>
-            <th>วันที่-เวลา</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="export-buttons">
-        <button onclick="exportToExcel()">Export to Excel</button>
-        <button onclick="exportToPDF()">Export to PDF</button>
-      </div>
-    </div>
+    <h1>🎧 รายชื่อไฟล์เสียงจาก Table Audios</h1>
+    <div id="audioCards"></div>
   </div>
 
   <script>
     const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function fetchData() {
-      const [quizRes, subjectiveRes, audioRes] = await Promise.all([
-        supabase.from('Quiz_results').select('*'),
-        supabase.from('subjective_answers').select('*'),
-        supabase.from('table_audios').select('*')
-      ]);
-
-      if (quizRes.error || subjectiveRes.error || audioRes.error) {
-        console.error('Error fetching data:', quizRes.error || subjectiveRes.error || audioRes.error);
+    async function fetchAudios() {
+      const { data, error } = await client.from('table_audios').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error('เกิดข้อผิดพลาดในการดึงข้อมูล:', error);
         return;
       }
 
-      const tableBody = document.querySelector('#resultsTable tbody');
-      tableBody.innerHTML = '';
+      const container = document.getElementById('audioCards');
+      container.innerHTML = '';
 
-      quizRes.data.forEach(entry => {
-        const name = entry.name;
-        const count = entry.total_questions || '-';
-        const audio = audioRes.data.find(a => a.name === name);
-        const answer = subjectiveRes.data.find(a => a.name === name);
-        const audioUrl = audio ? audio.audio_url : '-';
-        const answerUrl = answer ? answer.answer_url : '-';
-        const timestamp = entry.created_at ? new Date(entry.created_at).toLocaleString() : '-';
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${name}</td>
-          <td>${count}</td>
-          <td>${audioUrl !== '-' ? `<a href="${audioUrl}" target="_blank">🔊 ฟังเสียง</a>` : '-'}</td>
-          <td>${answerUrl !== '-' ? `<a href="${answerUrl}" target="_blank">📄 คำตอบ</a>` : '-'}</td>
-          <td>${timestamp}</td>
+      data.forEach(row => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${row.name || 'ไม่ระบุชื่อ'}</h3>
+          <p><strong>วันที่:</strong> ${new Date(row.created_at).toLocaleString()}</p>
+          <p><a href="${row.audio_url}" target="_blank">🔊 เปิดไฟล์เสียง</a></p>
         `;
-        tableBody.appendChild(row);
+        container.appendChild(card);
       });
     }
 
-    fetchData();
+    fetchAudios();
 
-    supabase.channel('dashboard_updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'Quiz_results' }, payload => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'subjective_answers' }, payload => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'table_audios' }, payload => fetchData())
+    // Realtime subscription
+    client.channel('audios_updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'table_audios' }, fetchAudios)
       .subscribe();
-
-    function exportToExcel() {
-      const table = document.getElementById('resultsTable');
-      const wb = XLSX.utils.table_to_book(table, { sheet: "Results" });
-      XLSX.writeFile(wb, 'roleplay_results.xlsx');
-    }
-
-    function exportToPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text("Roleplay Test Results", 14, 16);
-      const rows = [];
-      document.querySelectorAll("#resultsTable tbody tr").forEach(tr => {
-        const row = [];
-        tr.querySelectorAll("td").forEach(td => row.push(td.innerText));
-        rows.push(row);
-      });
-      doc.autoTable({
-        head: [['ชื่อผู้เข้าสอบ', 'จำนวนข้อที่ทำ', 'ไฟล์เสียง', 'ไฟล์คำตอบ', 'วันที่-เวลา']],
-        body: rows,
-        startY: 20
-      });
-      doc.save("roleplay_results.pdf");
-    }
   </script>
+</div>
 </body>
 </html>
