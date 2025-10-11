@@ -1,89 +1,68 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard Roleplay Full</title>
+  <meta charset="UTF-8">
+  <title>Dashboard Roleplay - Bucket Responses</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background: linear-gradient(to right, #74ebd5, #ACB6E5);
     }
-    .container {
-      max-width: 1200px;
-      margin: auto;
-      padding: 20px;
+    .login-container, .dashboard-container {
+      max-width: 600px;
+      margin: 50px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      animation: fadeIn 0.5s ease-in-out;
     }
     .card {
-      background: white;
+      background: #fff;
       border-radius: 10px;
       padding: 15px;
       margin: 10px 0;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       animation: fadeIn 0.5s ease-in-out;
     }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
     @keyframes fadeIn {
       from {opacity: 0;}
       to {opacity: 1;}
     }
-    .hidden { display: none; }
-    .login-box {
-      max-width: 400px;
-      margin: 100px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    input, button {
-      padding: 10px;
-      margin: 5px 0;
-      width: 100%;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #74ebd5;
-      border: none;
-      cursor: pointer;
-    }
-    .filter-box {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .filter-box input {
-      flex: 1;
-    }
-    .export-buttons {
-      margin: 10px 0;
-    }
   </style>
 </head>
 <body>
-  <div id="loginSection" class="login-box">
+  <div class="login-container" id="loginSection">
     <h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
-    <input type="text" id="username" placeholder="ชื่อผู้ใช้" />
-    <input type="password" id="password" placeholder="รหัสผ่าน" />
+    <input type="text" id="username" placeholder="ชื่อผู้ใช้">
+    <input type="password" id="password" placeholder="รหัสผ่าน">
     <button onclick="login()">เข้าสู่ระบบ</button>
   </div>
 
-  <div id="dashboard" class="container hidden">
-    <h1>📊 ข้อมูล Roleplay ทั้งหมด</h1>
-    <div class="filter-box">
-      <input type="text" id="searchName" placeholder="ค้นหาชื่อผู้เข้าสอบ" oninput="renderCards()" />
-      <input type="date" id="searchDate" onchange="renderCards()" />
-    </div>
-    <div class="export-buttons">
-      <button onclick="exportExcel()">📥 Export Excel</button>
-      <button onclick="exportPDF()">📄 Export PDF</button>
-    </div>
-    <div id="cardsContainer"></div>
+  <div class="dashboard-container" id="dashboard" style="display:none;">
+    <h2>🎧 รายชื่อไฟล์เสียงจาก Bucket responses</h2>
+    <div id="audioCards"></div>
   </div>
 
   <script>
@@ -91,107 +70,42 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
     const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    let allData = [];
-
     function login() {
-      const u = document.getElementById('username').value;
-      const p = document.getElementById('password').value;
-      if (u === 'admin' && p === '123456') {
-        document.getElementById('loginSection').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        fetchAllData();
-        subscribeRealtime();
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      if (user === 'admin' && pass === '123456') {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        fetchAudiosFromBucket();
       } else {
         alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     }
 
-    async function fetchAllData() {
-      const [quizRes, answersRes] = await Promise.all([
-        client.from('Quiz_results').select('*'),
-        client.from('subjective_answers').select('*')
-      ]);
-
-      const { data: bucketFiles } = await client.storage.from('responses').list('', {
+    async function fetchAudiosFromBucket() {
+      const { data, error } = await client.storage.from('responses').list('', {
         limit: 100,
         sortBy: { column: 'created_at', order: 'desc' }
       });
 
-      allData = [];
+      if (error) {
+        console.error('เกิดข้อผิดพลาด:', error);
+        return;
+      }
 
-      (quizRes.data || []).forEach(row => {
-        const answer = (answersRes.data || []).find(a => a.name === row.name);
-        const audio = (bucketFiles || []).find(f => f.name.includes(row.name));
-        allData.push({
-          name: row.name,
-          total: row.total_questions,
-          answer_url: answer?.answer_url || '',
-          audio_url: audio ? `${supabaseUrl}/storage/v1/object/public/responses/${audio.name}` : '',
-          created_at: row.created_at
-        });
-      });
-
-      renderCards();
-    }
-
-    function renderCards() {
-      const container = document.getElementById('cardsContainer');
+      const container = document.getElementById('audioCards');
       container.innerHTML = '';
-      const nameFilter = document.getElementById('searchName').value.toLowerCase();
-      const dateFilter = document.getElementById('searchDate').value;
 
-      const filtered = allData.filter(d => {
-        const matchName = d.name.toLowerCase().includes(nameFilter);
-        const matchDate = dateFilter ? d.created_at?.startsWith(dateFilter) : true;
-        return matchName && matchDate;
-      });
-
-      filtered.forEach(d => {
+      data.forEach(file => {
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/responses/${file.name}`;
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-          <h3>${d.name}</h3>
-          <p>จำนวนข้อที่ทำ: ${d.total || '-'}</p>
-          <p><a href="${d.audio_url}" target="_blank">🎧 เปิดไฟล์เสียง</a></p>
-          <p><a href="${d.answer_url}" target="_blank">📄 เปิดไฟล์คำตอบ</a></p>
-          <p><strong>วันที่:</strong> ${d.created_at ? new Date(d.created_at).toLocaleString() : '-'}</p>
+          <h3>${file.name}</h3>
+          <p><a href="${publicUrl}" target="_blank">🎧 เปิดไฟล์เสียง</a></p>
         `;
         container.appendChild(card);
       });
-    }
-
-    function subscribeRealtime() {
-      client.channel('dashboard_updates')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'Quiz_results' }, fetchAllData)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'subjective_answers' }, fetchAllData)
-        .subscribe();
-    }
-
-    function exportExcel() {
-      const ws = XLSX.utils.json_to_sheet(allData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'ข้อมูล');
-      XLSX.writeFile(wb, 'dashboard_data.xlsx');
-    }
-
-    function exportPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(12);
-      let y = 10;
-      allData.forEach(d => {
-        doc.text(`ชื่อ: ${d.name}`, 10, y);
-        doc.text(`จำนวนข้อ: ${d.total || '-'}`, 10, y + 6);
-        doc.text(`เสียง: ${d.audio_url}`, 10, y + 12);
-        doc.text(`คำตอบ: ${d.answer_url}`, 10, y + 18);
-        doc.text(`วันที่: ${d.created_at ? new Date(d.created_at).toLocaleString() : '-'}`, 10, y + 24);
-        y += 32;
-        if (y > 270) {
-          doc.addPage();
-          y = 10;
-        }
-      });
-      doc.save('dashboard_data.pdf');
     }
   </script>
 </body>
