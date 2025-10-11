@@ -3,136 +3,179 @@
 <html lang="th">
 <head>
 <meta charset="utf-8"/>
-<title>Dashboard - Roleplay Test</title>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard Roleplay Table</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
 <style>
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #74ebd5, #ACB6E5);
-            color: #333;
-        }
-        .login-container, .dashboard-container {
-            max-width: 600px;
-            margin: 80px auto;
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            animation: fadeIn 1s ease-in-out;
-        }
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #74ebd5;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        button:hover {
-            background: #4ac9c0;
-        }
-        .card {
-            background: #f9f9f9;
-            margin: 15px 0;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            animation: fadeInUp 0.5s ease forwards;
-        }
-        .card h4 {
-            margin: 0 0 10px;
-        }
-        .card a {
-            color: #0077cc;
-            text-decoration: none;
-        }
-        @keyframes fadeIn {
-            from {opacity: 0;}
-            to {opacity: 1;}
-        }
-        @keyframes fadeInUp {
-            from {opacity: 0; transform: translateY(20px);}
-            to {opacity: 1; transform: translateY(0);}
-        }
-    </style>
+    body {
+      background: linear-gradient(to right, #74ebd5, #ACB6E5);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card {
+      animation: fadeIn 0.8s ease-in-out;
+      margin-top: 20px;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    .table-responsive {
+      margin-top: 20px;
+    }
+    .login-container {
+      max-width: 400px;
+      margin: 80px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+  </style>
 </head>
 <body>
-<div class="login-container" id="login-container">
-<h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
-<input id="username" placeholder="ชื่อผู้ใช้" type="text"/>
-<input id="password" placeholder="รหัสผ่าน" type="password"/>
-<button onclick="login()">เข้าสู่ระบบ</button>
+<div class="login-container" id="loginSection">
+<h4 class="text-center">เข้าสู่ระบบหัวหน้า</h4>
+<div class="mb-3">
+<label class="form-label">ชื่อผู้ใช้</label>
+<input class="form-control" id="username" type="text"/>
 </div>
-<div class="dashboard-container" id="dashboard-container" style="display:none;">
-<h2>Dashboard - ผลการสอบ Roleplay</h2>
-<div id="results"></div>
+<div class="mb-3">
+<label class="form-label">รหัสผ่าน</label>
+<input class="form-control" id="password" type="password"/>
 </div>
-<script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+<button class="btn btn-primary w-100" onclick="login()">เข้าสู่ระบบ</button>
+</div>
+<div class="container" id="dashboardSection" style="display:none;">
+<div class="card">
+<div class="card-body">
+<h4 class="card-title">ข้อมูลการสอบ Roleplay</h4>
+<div class="row mb-3">
+<div class="col-md-4">
+<label>เลือกวันที่:</label>
+<input class="form-control" id="filterDate" type="date"/>
+</div>
+<div class="col-md-4 d-flex align-items-end">
+<button class="btn btn-success" onclick="exportCSV()">ดาวน์โหลดข้อมูล CSV</button>
+</div>
+</div>
+<div class="table-responsive">
 
-        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
-        const supabase = createClient(supabaseUrl, supabaseKey);
+<div style="margin: 20px 0;">
+<button onclick="exportToExcel()" style="padding: 10px 20px; margin-right: 10px;">📊 Export to Excel</button>
+<button onclick="exportToPDF()" style="padding: 10px 20px;">📄 Export to PDF</button>
+</div>
+<table class="table table-bordered table-striped" id="resultsTable">
+<thead class="table-dark">
+<tr>
+<th>ชื่อผู้เข้าสอบ</th>
+<th>จำนวนข้อที่ทำ</th>
+<th>ไฟล์เสียง</th>
+<th>ไฟล์คำตอบ</th>
+<th>วันที่-เวลา</th>
+</tr>
+</thead>
+<tbody id="resultsBody"></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+    const supabase = supabase.createClient(
+      'https://wzwyotzzxycqfwercakh.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'
+    );
 
-        
-}</script>
-<script>function login() {
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            if (user === 'admin' && pass === '123456') {
-                document.getElementById('login-container').style.display = 'none';
-                document.getElementById('dashboard-container').style.display = 'block';
-                loadResults();
-            } 
-else {
-                alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-            }
-        }
+    function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+      if (user === 'admin' && pass === '123456') {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        loadData();
+      } else {
+        alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      }
+    }
 
-        async function loadResults() {
-            const { data: quizResults } = await supabase.from('Quiz_results').select('*');
-            const { data: subjectiveAnswers } = await supabase.from('subjective_answers').select('*');
-            const { data: tableAudios } = await supabase.from('table_audios').select('*');
+    async function loadData() {
+      const { data: quizResults } = await supabase.from('Quiz_results').select('*');
+      const { data: subjectiveAnswers } = await supabase.from('subjective_answers').select('*');
+      const { data: tableAudios } = await supabase.from('table_audios').select('*');
 
-            const container = document.getElementById('results');
-            container.innerHTML = '';
+      const tableBody = document.getElementById('resultsBody');
+      tableBody.innerHTML = '';
 
-            const users = new Set([
-                ...quizResults.map(r => r.name),
-                ...subjectiveAnswers.map(r => r.name),
-                ...tableAudios.map(r => r.name)
-            ]);
+      quizResults.forEach(result => {
+        const answer = subjectiveAnswers.find(a => a.name === result.name);
+        const audio = tableAudios.find(a => a.name === result.name);
+        const createdAt = new Date(result.created_at).toLocaleString();
 
-            users.forEach(name => {
-                const quiz = quizResults.filter(r => r.name === name);
-                const subjective = subjectiveAnswers.find(r => r.name === name);
-                const audio = tableAudios.find(r => r.name === name);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${result.name}</td>
+          <td>${result.total_questions}</td>
+          <td><a href="${audio?.audio_url || '#'}" target="_blank">🔊 ฟังเสียง</a></td>
+          <td><a href="${answer?.answer_url || '#'}" target="_blank">📄 คำตอบ</a></td>
+          <td>${createdAt}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
 
-                const card = document.createElement('div');
-                card.className = 'card';
+    function exportCSV() {
+      const rows = [['ชื่อผู้เข้าสอบ','จำนวนข้อที่ทำ','ไฟล์เสียง','ไฟล์คำตอบ','วันที่-เวลา']];
+      document.querySelectorAll('#resultsBody tr').forEach(tr => {
+        const cols = Array.from(tr.children).map(td => td.innerText);
+        rows.push(cols);
+      });
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "roleplay_results.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+function exportToExcel() {
+    const table = document.getElementById("resultsTable");
+    const wb = XLSX.utils.table_to_book(table, {sheet:"Results"});
+    XLSX.writeFile(wb, "Roleplay_Results.xlsx");
+}
 
-                card.innerHTML = `
-                    <h4>ชื่อผู้เข้าสอบ: ${name}</h4>
-                    <p>จำนวนข้อที่ทำ: ${quiz.length}</p>
-                    <p><a href="${audio?.audio_url || '#'}" target="_blank">🔊 ไฟล์เสียง</a></p>
-                    <p><a href="${subjective?.answer_url || '#'}" target="_blank">📄 ไฟล์คำตอบ</a></p>
-                `;
-                container.appendChild(card);
-            });
-        }
-    </script></body>
+function exportToPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const table = document.getElementById("resultsTable");
+    let rows = [];
+    let headers = [];
+
+    // Get headers
+    table.querySelectorAll("thead th").forEach(th => headers.push(th.innerText));
+    rows.push(headers);
+
+    // Get rows
+    table.querySelectorAll("tbody tr").forEach(tr => {
+        let row = [];
+        tr.querySelectorAll("td").forEach(td => row.push(td.innerText));
+        rows.push(row);
+    });
+
+    // Add to PDF
+    let startY = 10;
+    rows.forEach((row, i) => {
+        row.forEach((cell, j) => {
+            doc.text(cell, 10 + j * 40, startY + i * 10);
+        });
+    });
+
+    doc.save("Roleplay_Results.pdf");
+}
+</script>
+</body>
 </html>
