@@ -1,112 +1,178 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard Roleplay - Bucket Responses</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to right, #74ebd5, #ACB6E5);
-    }
-    .login-container, .dashboard-container {
-      max-width: 600px;
-      margin: 50px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-      animation: fadeIn 0.5s ease-in-out;
-    }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px 0;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      animation: fadeIn 0.5s ease-in-out;
-    }
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
-    button {
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    @keyframes fadeIn {
-      from {opacity: 0;}
-      to {opacity: 1;}
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>แดชบอร์ด Roleplay</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.7/build/pdfmake.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.7/build/vfs_fonts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to right, #74ebd5, #ACB6E5);
+        }
+        .container {
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .card:hover {
+            transform: scale(1.02);
+        }
+        .filters {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            width: 300px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        @media (max-width: 600px) {
+            input[type="text"], button {
+                width: 100%;
+                margin-top: 10px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="login-container" id="loginSection">
-    <h2>เข้าสู่ระบบสำหรับหัวหน้า</h2>
-    <input type="text" id="username" placeholder="ชื่อผู้ใช้">
-    <input type="password" id="password" placeholder="รหัสผ่าน">
-    <button onclick="login()">เข้าสู่ระบบ</button>
-  </div>
+    <div class="container">
+        <div class="card">
+            <h2>แดชบอร์ด Roleplay</h2>
+            <div class="filters">
+                <input type="text" id="searchInput" placeholder="ค้นหา...">
+                <button onclick="exportExcel()">Export Excel</button>
+                <button onclick="exportPDF()">Export PDF</button>
+            </div>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>ชื่อ</th>
+                        <th>คะแนน Quiz</th>
+                        <th>คำตอบอัตนัย</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 
-  <div class="dashboard-container" id="dashboard" style="display:none;">
-    <h2>🎧 รายชื่อไฟล์เสียงจาก Bucket responses</h2>
-    <div id="audioCards"></div>
-  </div>
+    <script>
+        const supabase = window.supabase.createClient('https://your-project.supabase.co', 'public-anon-key');
 
-  <script>
-    const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno';
-    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+        async function fetchData() {
+            const { data: quizResults, error: quizError } = await supabase.from('Quiz_results').select('*');
+            const { data: subjectiveAnswers, error: subjectiveError } = await supabase.from('subjective_answers').select('*');
 
-    function login() {
-      const user = document.getElementById('username').value;
-      const pass = document.getElementById('password').value;
-      if (user === 'admin' && pass === '123456') {
-        document.getElementById('loginSection').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
-        fetchAudiosFromBucket();
-      } else {
-        alert('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      }
-    }
+            if (quizError || subjectiveError) {
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลได้', 'error');
+                return;
+            }
 
-    async function fetchAudiosFromBucket() {
-      const { data, error } = await client.storage.from('responses').list('', {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      });
+            const combinedData = quizResults.map(q => {
+                const subjective = subjectiveAnswers.find(s => s.user_id === q.user_id);
+                return {
+                    name: q.name,
+                    score: q.score,
+                    answer: subjective ? subjective.answer : 'ไม่มีข้อมูล'
+                };
+            });
 
-      if (error) {
-        console.error('เกิดข้อผิดพลาด:', error);
-        return;
-      }
+            renderTable(combinedData);
+        }
 
-      const container = document.getElementById('audioCards');
-      container.innerHTML = '';
+        function renderTable(data) {
+            const tbody = document.querySelector('#dataTable tbody');
+            tbody.innerHTML = '';
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
-      data.forEach(file => {
-        const publicUrl = `${supabaseUrl}/storage/v1/object/public/responses/${file.name}`;
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h3>${file.name}</h3>
-          <p><a href="${publicUrl}" target="_blank">🎧 เปิดไฟล์เสียง</a></p>
-        `;
-        container.appendChild(card);
-      });
-    }
-  </script>
+            data.filter(row => row.name.toLowerCase().includes(searchTerm)).forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${row.name}</td><td>${row.score}</td><td>${row.answer}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', () => fetchData());
+
+        function exportExcel() {
+            const table = document.getElementById('dataTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Roleplay" });
+            XLSX.writeFile(wb, "roleplay_dashboard.xlsx");
+        }
+
+        function exportPDF() {
+            const rows = [...document.querySelectorAll('#dataTable tbody tr')].map(tr => {
+                return [...tr.children].map(td => td.textContent);
+            });
+            const docDefinition = {
+                content: [
+                    { text: 'แดชบอร์ด Roleplay', style: 'header' },
+                    {
+                        table: {
+                            headerRows: 1,
+                            widths: ['*', '*', '*'],
+                            body: [
+                                ['ชื่อ', 'คะแนน Quiz', 'คำตอบอัตนัย'],
+                                ...rows
+                            ]
+                        }
+                    }
+                ],
+                styles: {
+                    header: {
+                        fontSize: 18,
+                        bold: true,
+                        marginBottom: 10
+                    }
+                }
+            };
+            pdfMake.createPdf(docDefinition).download('roleplay_dashboard.pdf');
+        }
+
+        fetchData();
+        supabase.channel('roleplay_updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'Quiz_results' }, payload => {
+                Swal.fire('อัปเดตใหม่', 'มีข้อมูลใหม่เข้ามา', 'info');
+                fetchData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'subjective_answers' }, payload => {
+                Swal.fire('อัปเดตใหม่', 'มีข้อมูลใหม่เข้ามา', 'info');
+                fetchData();
+            })
+            .subscribe();
+    </script>
 </body>
 </html>
