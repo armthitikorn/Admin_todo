@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard: ไฟล์เสียง Roleplay</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+    
+    <style>
+        body {
+            background-color: #f4f7f6;
+        }
+        .submission-card {
+            border-left: 5px solid #007bff;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .submission-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-5">
+        <h2 class="mb-4 text-primary"><i class="bi bi-headset"></i> Dashboard: ไฟล์เสียง Roleplay Submissions</h2>
+        <hr>
+        
+        <p class="text-muted" id="totalCount">กำลังโหลดข้อมูล...</p>
+        
+        <div id="loadingIndicator" class="text-center my-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">กำลังดึงรายการไฟล์เสียง...</p>
+        </div>
+
+        <div id="submissionsList" class="row g-4">
+            </div>
+
+        <div id="messageBox" class="alert alert-danger mt-5" style="display:none;"></div>
+        
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script type="module">
+        // --- Supabase Imports & Config ---
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+        // **ตั้งค่า Supabase ของคุณ (ใช้ค่าเดิมจากไฟล์ g.html)**
+        const supabaseUrl = 'https://wzwyotzzxycqfwercakh.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6d3lvdHp6eHljcWZ3ZXJjYWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcwNTg3MTMsImV4cCI6MjA3MjYzNDcxM30.lgiAf9oBUqsaWGb3u_80wuoKAODQHE_lIBxpGumhrno'; 
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // --- DOM Elements ---
+        const submissionsList = document.getElementById('submissionsList');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const totalCount = document.getElementById('totalCount');
+        const messageBox = document.getElementById('messageBox');
+        
+        // --- Utility ---
+        function showMessage(text, type = 'danger') {
+            messageBox.textContent = text;
+            messageBox.className = `alert mt-5 alert-${type}`;
+            messageBox.style.display = 'block';
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('th-TH', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+        
+        // --- Core Logic ---
+
+        /**
+         * ดึงข้อมูลทั้งหมดจากตาราง submissions
+         */
+        async function loadSubmissions() {
+            loadingIndicator.style.display = 'block';
+            
+            const { data, error } = await supabase
+                .from('submissions')
+                // ดึงข้อมูลทั้งหมด (*) และจัดเรียงจากใหม่ไปเก่า
+                .select('*')
+                .order('created_at', { ascending: false }); 
+
+            loadingIndicator.style.display = 'none';
+
+            if (error) {
+                console.error('Error fetching submissions:', error);
+                showMessage(`เกิดข้อผิดพลาดในการดึงข้อมูล: ${error.message}. ตรวจสอบ RLS Policy!`);
+                totalCount.textContent = 'ไม่สามารถโหลดข้อมูลได้';
+                return;
+            }
+            
+            renderSubmissions(data);
+        }
+
+        /**
+         * แสดงข้อมูลไฟล์เสียงที่ดึงมาในรูปแบบ Card
+         * @param {Array<Object>} submissions - รายการข้อมูล submissions จาก Supabase
+         */
+        function renderSubmissions(submissions) {
+            totalCount.textContent = `พบรายการไฟล์เสียงที่ส่งมาแล้วทั้งหมด: ${submissions.length} รายการ`;
+            
+            if (submissions.length === 0) {
+                submissionsList.innerHTML = '<p class="col-12 text-center text-muted">ยังไม่มีรายการไฟล์เสียงที่ถูกส่งมา</p>';
+                return;
+            }
+
+            // เคลียร์รายการเดิม
+            submissionsList.innerHTML = ''; 
+
+            submissions.forEach(submission => {
+                const submissionTime = formatDateTime(submission.created_at);
+                
+                const cardHtml = `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm submission-card">
+                            <div class="card-body">
+                                <h5 class="card-title text-success">${submission.name || 'ไม่ระบุชื่อ'}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">Part ${submission.part_number} - ข้อที่ ${submission.question_number}</h6>
+                                <p class="card-text">
+                                    <strong>คำถาม:</strong> ${submission.question_text}<br>
+                                    <small class="text-secondary">เวลาส่ง: ${submissionTime}</small>
+                                </p>
+                                
+                                <label class="form-label mt-2">ไฟล์เสียงตอบกลับ:</label>
+                                <audio controls class="w-100 mt-1">
+                                    <source src="${submission.audio_url}" type="audio/webm">
+                                    เบราว์เซอร์ของคุณไม่รองรับการเล่นไฟล์เสียง
+                                </audio>
+
+                                <small class="d-block mt-2 text-info">Audio URL: <a href="${submission.audio_url}" target="_blank">ลิงก์</a></small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                submissionsList.insertAdjacentHTML('beforeend', cardHtml);
+            });
+        }
+
+        // --- Initialize ---
+        document.addEventListener('DOMContentLoaded', loadSubmissions);
+    </script>
+</body>
+</html>
