@@ -257,7 +257,7 @@
     const createAudioUploaderHTML = (id, table, column, index_col, index_val) => {
         return `
             <div class="upload-area">
-                <label for="${id}_file_input">อัปโหลดไฟล์เสียงใหม่ (.webm/MP3):</label>
+                <label for="${id}_file_input">อัปโหลดไฟล์เสียงใหม่ (.webm/.m4a):</label>
                 <input type="file" id="${id}_file_input" accept="audio/*">
                 <button onclick="uploadAudio('${id}_file_input', '${table}', '${column}', '${index_col}', '${index_val}', '${id}_status')">⬆️ อัปโหลด</button>
                 <p class="loading-text" id="${id}_status"></p>
