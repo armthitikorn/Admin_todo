@@ -199,10 +199,10 @@
         
         const selectedProductTag = document.getElementById('adminProductType').value;
         
-        // 1. STRICT_FILTER: สำหรับส่วนที่ต้องเปลี่ยนไปตาม Product จริงๆ (S1, S2, S3, S4 Main, และตอนนี้รวม S5 ด้วย)
+        // 1. STRICT_FILTER: สำหรับส่วนที่ต้องเปลี่ยนไปตาม Product จริงๆ
         const STRICT_FILTER = [selectedProductTag]; 
 
-        // 2. HEALTH_STANDARD_FILTER: สำหรับส่วนที่เป็นมาตรฐานกลางของ Health เท่านั้น (S4 Follow-up)
+        // 2. HEALTH_STANDARD_FILTER: สำหรับส่วนที่เป็นมาตรฐานกลางของ Health เท่านั้น
         const HEALTH_STANDARD_FILTER = ['health'];
 
         try {
@@ -222,20 +222,21 @@
             const { data: s3Data, error: s3Error } = await supabase.from('objections_s3').select('*').overlaps('product_type', STRICT_FILTER).order('ob_index', { ascending: true });
             if (s3Error) throw s3Error; s3ObjectionsData = s3Data;
             
-            // 2.4 S4 - Main Questions (Strict -> Saving เห็น 1 ข้อ)
+            // 2.4 S4 - Main Questions (Strict)
             const { data: qData, error: qError } = await supabase.from('health_questions_s4').select('*').overlaps('product_type', STRICT_FILTER).order('q_index', { ascending: true });
             if (qError) throw qError; healthQuestionsData = qData;
             yesTriggerQ = qData.find(q => q.is_yes_trigger) || null;
             
-            // 2.5 S4 - Follow Up Names (Standard -> เห็น 5 ข้อ เฉพาะ Health)
+            // 2.5 S4 - Follow Up Names (Standard -> เฉพาะ Health)
             const { data: fuData, error: fuError } = await supabase.from('s4_follow_up_names').select('*').overlaps('product_type', HEALTH_STANDARD_FILTER).order('step_index', { ascending: true });
             if (fuError) throw fuError; followUpNamesData = fuData;
             
-            // 2.6 S4 - Follow Up Replies (Standard -> เห็น 5 ไฟล์ เฉพาะ Health)
+            // 2.6 S4 - Follow Up Replies (Standard -> เฉพาะ Health)
             const { data: furData, error: furError } = await supabase.from('s4_follow_up_replies').select('*').overlaps('product_type', HEALTH_STANDARD_FILTER).order('step_index', { ascending: true });
             if (furError) throw furError; followUpRepliesData = furData;
 
-            // ** 2.7 S5 - Registration (แก้ไขแล้ว: เปลี่ยนมาใช้ STRICT_FILTER ตาม Product ที่เลือก) **
+            // ** 2.7 S5 - Registration (แก้ไขจุดนี้!) **
+            // เปลี่ยนจาก HEALTH_STANDARD_FILTER เป็น STRICT_FILTER เพื่อให้โหลดตาม Product ที่เลือก
             const { data: s5Data, error: s5Error } = await supabase.from('scripts_s5').select('*').overlaps('product_type', STRICT_FILTER).order('step_index', { ascending: true });
             if (s5Error) throw s5Error; s5StepsData = s5Data;
 
